@@ -7,7 +7,9 @@
          :git/sha "f9791bb"}
         com.github.seancorfield/next-jdbc
         {:git/tag "v1.2.724"
-         :git/sha "de432a2"}}
+         :git/sha "de432a2"}
+        org.clojure/tools.logging
+        {:mvn/version "1.2.4"}}
  :aliases {:fin-data {:main-opts ["-m" "fin-data.core"]}
            :build    {:deps
                       {io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}}

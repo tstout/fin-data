@@ -1,7 +1,9 @@
 (ns fin-data.core
   (:require [clojure.tools.cli :refer [parse-opts]]
             [clojure.string :as string]
-            [sys-loader.core :as sys])
+            [clojure.tools.logging :as log]
+            [sys-loader.core :as sys]
+            [fin-data.ddl :as ddl])
   (:gen-class))
 
 (def cli-options
@@ -50,18 +52,19 @@
   (println msg)
   (System/exit status))
 
-(defn -main [& args] 
+(defn -main [& args]
   (let [{:keys [action _options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
       (case action
-        "server" (sys/-main args)))))
+        "server" (do
+                   (sys/-main args)
+                   (log/debug "fin-data server init complete"))))))
 
 
 (defn init
   "The sys-module initialization fn. This configures the DB schema."
   [state]
   (let [migrate (-> :sys/migrations state)]
-    (doseq [ddl-fn [#_"Add vars to ddl functions here..."]]
-      (migrate ddl-fn)))
-  (prn "----init invoked-----"))
+    (ddl/exec-ddl migrate)
+    (log/info "fin-data module init complete")))
