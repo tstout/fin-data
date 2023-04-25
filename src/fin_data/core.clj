@@ -68,3 +68,11 @@
   (let [migrate (-> :sys/migrations state)]
     (ddl/exec-ddl migrate)
     (log/info "fin-data module init complete")))
+
+
+(comment
+  *e
+  @sys/sys-state
+
+  ;;
+      )

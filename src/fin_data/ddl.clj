@@ -1,4 +1,5 @@
-(ns fin-data.ddl)
+(ns fin-data.ddl
+  (:require [sys-loader.core :as sys]))
 
 
 (defn init-schema [run-ddl]
@@ -11,7 +12,10 @@
     (migrate-fn ddl-fn)))
 
 (comment
+  *e
 
-
+  (-> @sys/sys-state
+      :sys/migrations
+      exec-ddl)
   ;;
   )

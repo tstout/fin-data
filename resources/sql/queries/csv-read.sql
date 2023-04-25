@@ -1,0 +1,16 @@
+CREATE TABLE FINKRATZEN.BOA_IMPORT(
+  POSTING_DATE VARCHAR, 
+  DESCRIPTION VARCHAR, 
+  AMOUNT VARCHAR)
+AS SELECT 
+  DESCRIPTION, 
+  COLUMN1, 
+  "Summary Amt." 
+FROM 
+	CSVREAD('{{file-name}}')
+WHERE 
+	DESCRIPTION REGEXP '^[0-9/0-9/0-9]'
+	AND "Summary Amt." IS NOT NULL;
+
+
+--'/Users/tstout/Downloads/stmt.csv'
