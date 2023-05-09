@@ -15,7 +15,8 @@
 (comment
   *e
   (md5 "abcdefhijklmnop")
-  
+
+  (md5 "Text")
   (md5 1.0)
   (time (md5 "abcdelskiekskallajf"))
 

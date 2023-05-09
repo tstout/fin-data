@@ -1,7 +1,9 @@
 (ns fin-data.db-io
   (:require [clojure.java.io :as io]
             [sys-loader.core :as sys]
-            [next.jdbc :as jdbc]))
+            [next.jdbc.result-set :as rs]
+            [next.jdbc :as jdbc]
+            [fin-data.md5 :refer [md5]]))
 
 (defn data-src
   "Grab the datasource from the sys-loader context"
@@ -28,6 +30,43 @@
       (.replace "{{file-name}}"
                 (str (System/getProperty "user.home") "/Downloads/stmt.csv"))))
 
+(defn with-conn [f]
+  {:pre [(fn? f)]}
+  (with-open [conn (jdbc/get-connection (data-src))]
+    (f conn)))
+
+;; Note - jdbc.next has many options regarding the shape of result sets.
+;; Currently using as-unqualified-lower-map as this suits my taste at the
+;; moment. 
+(defn select-import
+  "fetch imported data"
+  []
+  (with-conn
+    (fn [conn]
+      (jdbc/execute! conn
+                     [(sql-text :select-boa-import)]
+                     {:builder-fn rs/as-unqualified-lower-maps}))))
+
+(defn calc-md5
+  "Calc MD5 sum for adding to import table. This is needed to generate a 
+   primary key for the BOA statements. The CSV download does not provide
+   any type of unique row identifier."
+  []
+  (map (fn [x]
+         (let [{:keys [id posting_date description amount]} x]
+           {:id id :md5 (md5 (str posting_date description amount))}))
+       (select-import)))
+
+(defn update-md5! []
+  (doseq [csum (calc-md5)]
+    (let [{:keys [id md5]} csum]
+      (with-conn
+        (fn [conn]
+          (jdbc/execute!
+           conn
+           [(sql-text :update-md5) md5 id]))))))
+
+
 (defn import-csv
   "Import BOA CSV file into import table
    finkratzen.boa_import"
@@ -37,9 +76,18 @@
     (jdbc/execute-one! conn
                        [(csv-import-sql)])))
 
-
 (comment
-  (sql-text :csv-read)
+  *e
+  (update-md5!)
+  (select-import)
+  (first (calc-md5))
+  (calc-md5)
+
+  (time (calc-md5))
+
+  (time select-import)
+  (sql-text :update-md5)
+  (sql-text :select-boa-import)
   (data-src)
   (import-csv)
   (csv-import-sql)
@@ -47,8 +95,5 @@
   (time (import-csv))
 
   (System/getProperty "user.home")
-
-
-
   ;;
   )
