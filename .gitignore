@@ -16,3 +16,5 @@ pom.xml.asc
 .clj-kondo
 .lsp
 .vscode
+.rebel_readline_history
+boa.csv

@@ -1,7 +1,6 @@
 (ns fin-data.ddl
   (:require [sys-loader.core :as sys]))
 
-
 (defn init-schema [run-ddl]
   (run-ddl "init-schema"))
 

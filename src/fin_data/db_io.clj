@@ -57,6 +57,7 @@
            {:id id :md5 (md5 (str posting_date description amount))}))
        (select-import)))
 
+;; TODO - this can be optimized a bit
 (defn update-md5! []
   (doseq [csum (calc-md5)]
     (let [{:keys [id md5]} csum]
@@ -95,5 +96,6 @@
   (time (import-csv))
 
   (System/getProperty "user.home")
+  (data-src)
   ;;
   )
