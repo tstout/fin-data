@@ -18,3 +18,4 @@ pom.xml.asc
 .vscode
 .rebel_readline_history
 boa.csv
+mail-words.txt
