@@ -66,17 +66,11 @@
         vec)))
 
 (defn locate-words-of-interest
-  "Given a vector of words extracted from an email body, determine the 
-     index within that vector of key elements within the email. These
-     include the amount, date, and location of purchase. A map of 
+  "Given a vector of words extracted from an email body and a set of words of interest,
+   determine the index within that vector of key elements within the email. 
+   Returns a map of:
      {:words [<vector of strings>] 
-      :values (([index \"Amount:\"] [index \"on:\"] [index \"at:\"])...)}
-     
-     See also extract-values-of-interest.
-     As of 05-Nov-2023, the BOA email body text contains these items of interest:
-     Amount:
-     On:
-     at:
+      :values ([index \"Amount:\"] [index \"on:\"] [index \"at:\"])...)}
      "
   [mail-body key-set]
   {:pre [(set? key-set)]}
@@ -93,6 +87,14 @@
        (filter #(string/ends-with? % ":"))
        distinct
        vec))
+
+(defn extract-amt [index words]
+  (-> (subvec words (+ 1 index) (+ 3 index))
+      last
+      bigdec))
+
+(defn extract-date [index words]
+  (string/join " " (subvec words (+ 1 index) (+ 4 index))))
 
 ;; Note: use of #' (var) for dispatch to support REPL reloading.
 (defmulti parse-body #'parse-dispatch)
@@ -114,163 +116,159 @@
   [:type-5])
 
 (defmethod parse-body ["Account:" "Amount:" "at:" "On:"] [mail-body]
-  (merge {:type :type-6}
-         (locate-words-of-interest mail-body #{"Amount:" "at:" "On:"})))
-
-  (defmethod parse-body ["Amount:" "Account:" "On:" "From:"] [mail-body]
-    [:type-7])
-
-  (defmethod parse-body ["transfer:" "Amount:" "date:"] [mail-body]
-    [:type-7])
-
-  (defmethod parse-body [] [mail-body]
-    [:ignore])
-
-  (defmethod parse-body ["amount:" "To:" "on:" "now:" "#:" "information:"] [mail-body]
-    [:type-8])
-
-;; (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
-;;   [:type-4])
-
-  (defn extract-amt [index words]
-    (-> (subvec words (+ 1 index) (+ 3 index))
-        last
-        bigdec))
-
-;; TODO - this is going to vary. Need to compute the end of the 
-;; merchant via the index difference of On: and at:
-;; Obvious option is to reduce on the coll of coordinate vectors
-  (defn extract-merchant [txn words]
-    (let [{:keys [at-index on-index]} txn
-          merchant (string/join " " (subvec words (+ 1 at-index) on-index))]
-      (merge txn {:merchant merchant})))
-
-  (defn extract-date [index words]
-    (string/join " " (subvec words (+ 1 index) (+ 4 index))))
-
-  (defn- process-txn
-    "Reduce on this txn structure ([index pos-key] ...):
-  ([19 \"Amount:\"] [24 \"at:\"] [28 \"On:\"]) 
-  words is a collection of the words making up the mail body"
-    [txn words]
-  ;;(prn txn)
-  ;; TODO - consider using the case to populate indices needed
-  ;; for merchant range calc and add a final map operation to add
-  ;; The merchant def...seems clean...implement this.
+  ;; TODO - words is not a good sym name here
+  (let [words (locate-words-of-interest mail-body #{"Amount:" "at:" "On:"})]
     (-> (reduce (fn [accum coordinate]
                   (let [[index pos-key] coordinate]
                     #_(prn (format "index: %d pos-key: %s" index pos-key))
                     (case pos-key
-                      "Amount:"  (merge {:amt (extract-amt index words)} accum)
+                      "Amount:"  (merge {:amt (extract-amt index (:words words))} accum)
                       "at:"      (merge {:at-index index} accum)
-                      "Merchant" (merge {:at-index index} accum)
-                      "On:"      (merge {:on       (extract-date index words)
-                                         :on-index index}     accum)
-                      "date:"    (merge {:on       (extract-date index words)
+                      "On:"      (merge {:on       (extract-date index (:words words))
                                          :on-index index}     accum))))
                 {}
-                txn)
-        (extract-merchant words)))
+                (:values words))
+        (merge {:type :type-6}))))
 
-  (defn extract-values-of-interest [mail-body]
-    (let [{:keys [words values]} (locate-values-of-interest mail-body)
-          txns                   (partition-all 3 values)]
-      #_(prn txns)
-      (map #(process-txn %1 words) txns)))
+(defmethod parse-body ["Amount:" "Account:" "On:" "From:"] [mail-body]
+  [:type-7])
 
-  (defn when-done
-    "Invoke a fn when a future completes. Returns a future wrapping the result
+(defmethod parse-body ["transfer:" "Amount:" "date:"] [mail-body]
+  [:type-7])
+
+(defmethod parse-body [] [mail-body]
+  [:ignore])
+
+(defmethod parse-body ["amount:" "To:" "on:" "now:" "#:" "information:"] [mail-body]
+  [:type-8])
+
+;; (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
+;;   [:type-4])
+
+;; TODO - this is going to vary. Need to compute the end of the 
+;; merchant via the index difference of On: and at:
+;; Obvious option is to reduce on the coll of coordinate vectors
+(defn extract-merchant [txn words]
+  (let [{:keys [at-index on-index]} txn
+        merchant (string/join " " (subvec words (+ 1 at-index) on-index))]
+    (merge txn {:merchant merchant})))
+
+(defn- process-txn
+  "Reduce on this txn structure ([index pos-key] ...):
+  ([19 \"Amount:\"] [24 \"at:\"] [28 \"On:\"]) 
+  words is a collection of the words making up the mail body"
+  [txn words]
+  ;;(prn txn)
+  ;; TODO - consider using the case to populate indices needed
+  ;; for merchant range calc and add a final map operation to add
+  ;; The merchant def...seems clean...implement this.
+  (-> (reduce (fn [accum coordinate]
+                (let [[index pos-key] coordinate]
+                  #_(prn (format "index: %d pos-key: %s" index pos-key))
+                  (case pos-key
+                    "Amount:"  (merge {:amt (extract-amt index words)} accum)
+                    "at:"      (merge {:at-index index} accum)
+                    "Merchant" (merge {:at-index index} accum)
+                    "On:"      (merge {:on       (extract-date index words)
+                                       :on-index index}     accum)
+                    "date:"    (merge {:on       (extract-date index words)
+                                       :on-index index}     accum))))
+              {}
+              txn)
+      (extract-merchant words)))
+
+(defn extract-values-of-interest [mail-body key-set]
+  (let [{:keys [words values]} (locate-words-of-interest mail-body key-set)
+        txns                   (partition-all 3 values)]
+    #_(prn txns)
+    (map #(process-txn %1 words) txns)))
+
+(defn when-done
+  "Invoke a fn when a future completes. Returns a future wrapping the result
    of the fn to call."
-    [future-to-watch fn-to-call]
-    (future (fn-to-call @future-to-watch)))
+  [future-to-watch fn-to-call]
+  (future (fn-to-call @future-to-watch)))
 
 ;; TODO - I think the map here is only processing the first txn
-  (defn extract-values-from-txns []
-    (when-done
-     (recent-boa (fetch-account "http://localhost:8080/v1/config/account/gmail-tstout"))
-     #(map extract-values-of-interest %)))
+(defn extract-values-from-txns []
+  (when-done
+   (recent-boa (fetch-account "http://localhost:8080/v1/config/account/gmail-tstout"))
+   #(map extract-values-of-interest %)))
 
 ;; Use extract-keys and dump-words to look at the shape of the 
 ;; email words. 
-  (defn extract-keys
-    "It is expected that the format of emails from BOA will change over time.
+(defn extract-keys
+  "It is expected that the format of emails from BOA will change over time.
    Use this fn in a REPL to view the possible key strings from the vector of email body
    words stored in a resource file."
-    [email-words]
-    (->> email-words
-         io/resource
-         slurp
-         string/split-lines
-         (filter #(string/ends-with? % ":"))))
+  [email-words]
+  (->> email-words
+       io/resource
+       slurp
+       string/split-lines
+       (filter #(string/ends-with? % ":"))))
 
-  (defn dump-words
-    "Dump the word vector from an email into a file named
+(defn dump-words
+  "Dump the word vector from an email into a file named
    mail-words.txt for analysis. See also extract-keys."
-    [mail]
-    (let [words (-> mail
-                    locate-values-of-interest
-                    :words)]
-      (doseq [w words]
-        (spit "mail-words.txt" (str w \newline) :append true))))
+  [mail key-set]
+  {:pre [(set? key-set)]}
+  (let [words (-> mail
+                  (locate-words-of-interest key-set)
+                  :words)]
+    (doseq [w words]
+      (spit "mail-words.txt" (str w \newline) :append true))))
 
-  (comment
-    (legacy-date "12-DEC-1990")
+(comment
+  *e
+  (legacy-date "12-DEC-1990")
 
-    (.parse (SimpleDateFormat. "dd-MMM-yyyy") "05-May-1970")
+  (.parse (SimpleDateFormat. "dd-MMM-yyyy") "05-May-1970")
 
-    (def recent (recent-boa
-                 (fetch-account
-                  "http://localhost:8080/v1/config/account/gmail-tstout")))
+  (def recent (recent-boa
+               (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout")))
 
-    (realized? recent)
+  (realized? recent)
 
-    (count @recent)
+  (count @recent)
 
     ;;(extract-body (nth @recent 2))
 
     ;;(nth @recent 3)
 
-    (dump-words (nth @recent 5))
+  (dump-words (nth @recent 5) {})
 
-    (parse-body (nth @recent 5))
+  (parse-body (nth @recent 3))
 
-    (locate-values-of-interest (second @recent))
+  (extract-values-of-interest (nth @recent 3) #{"Amount:" "at:" "On:"})
 
-    (pprint (extract-values-of-interest (last @recent)))
+  
 
-    *e
-    (extract-values-of-interest (last @recent))
 
-    (second @recent)
+  (second @recent)
 
   ;; This is what you need to filter in some cases
-    (not (Character/isDigit (first "a23:")))
+  (not (Character/isDigit (first "a23:")))
 
-    (string/replace "privacy\r\n\r\nPlease don't" #"\\R" " ")
+  
 
-    (.replaceAll "privacy\r\n\r\nPlease don't" "\\R" " ")
-
-    "privacy\r\n\r\nPlease don't"
-    (count @recent)
-
-    (def rvec (vector @recent))
-
-    (vec (extract-keys "type-5.txt"))
-    (= #{1 2 3} #{3 2 1})
+  (vec (extract-keys "type-5.txt"))
+  (= #{1 2 3} #{3 2 1})
 
   ;; Parsing body words can result in this:
-    (frequencies
-     ["Account:" "Amount:" "at:" "On:"
-      "Account:" "Amount:" "at:" "On:"
-      "Account:" "Amount:" "at:" "On:"])
+  (frequencies
+   ["Account:" "Amount:" "at:" "On:"
+    "Account:" "Amount:" "at:" "On:"
+    "Account:" "Amount:" "at:" "On:"])
 
   ;; distinct can find the pattern needed for defmethod
   ;; parse methods should assume their might be more than one
   ;; txn
-    (distinct
-     ["Account:" "Amount:" "at:" "On:"
-      "Account:" "Amount:" "at:" "On:"
-      "Account:" "Amount:" "at:" "On:"])
+  (distinct
+   ["Account:" "Amount:" "at:" "On:"
+    "Account:" "Amount:" "at:" "On:"
+    "Account:" "Amount:" "at:" "On:"])
 
 ;;
-    )
+  )
