@@ -65,6 +65,11 @@
     (-> (map #(string/trim %) words)
         vec)))
 
+(defn extract-merchant [txn words]
+  (let [{:keys [at-index on-index]} txn
+        merchant (string/join " " (subvec words (+ 1 at-index) on-index))]
+    (merge txn {:merchant merchant})))
+
 (defn locate-words-of-interest
   "Given a vector of words extracted from an email body and a set of words of interest,
    determine the index within that vector of key elements within the email. 
@@ -96,7 +101,7 @@
 (defn extract-date [index words]
   (string/join " " (subvec words (+ 1 index) (+ 4 index))))
 
-;; Note: use of #' (var) for dispatch to support REPL reloading.
+;; Note: use of #' (var) for dispatch fn to support REPL reloading.
 (defmulti parse-body #'parse-dispatch)
 
 (defmethod parse-body ["Amount:" "at:" "On:"] [mail-body]
@@ -128,6 +133,7 @@
                                          :on-index index}     accum))))
                 {}
                 (:values words))
+        (extract-merchant (:words words))
         (merge {:type :type-6}))))
 
 (defmethod parse-body ["Amount:" "Account:" "On:" "From:"] [mail-body]
@@ -148,10 +154,6 @@
 ;; TODO - this is going to vary. Need to compute the end of the 
 ;; merchant via the index difference of On: and at:
 ;; Obvious option is to reduce on the coll of coordinate vectors
-(defn extract-merchant [txn words]
-  (let [{:keys [at-index on-index]} txn
-        merchant (string/join " " (subvec words (+ 1 at-index) on-index))]
-    (merge txn {:merchant merchant})))
 
 (defn- process-txn
   "Reduce on this txn structure ([index pos-key] ...):
@@ -241,17 +243,16 @@
 
   (parse-body (nth @recent 3))
 
+  (def t-txn (parse-body (nth @recent 3)))
+
+  t-txn
+
   (extract-values-of-interest (nth @recent 3) #{"Amount:" "at:" "On:"})
-
-  
-
 
   (second @recent)
 
   ;; This is what you need to filter in some cases
   (not (Character/isDigit (first "a23:")))
-
-  
 
   (vec (extract-keys "type-5.txt"))
   (= #{1 2 3} #{3 2 1})
