@@ -122,18 +122,20 @@
 
 (defmethod parse-body ["Account:" "Amount:" "at:" "On:"] [mail-body]
   ;; TODO - words is not a good sym name here
-  (let [words (locate-words-of-interest mail-body #{"Amount:" "at:" "On:"})]
+  (let [{:keys [words values]} (locate-words-of-interest
+                                mail-body
+                                #{"Amount:" "at:" "On:"})]
     (-> (reduce (fn [accum coordinate]
                   (let [[index pos-key] coordinate]
                     #_(prn (format "index: %d pos-key: %s" index pos-key))
                     (case pos-key
-                      "Amount:"  (merge {:amt (extract-amt index (:words words))} accum)
+                      "Amount:"  (merge {:amt (extract-amt index words)} accum)
                       "at:"      (merge {:at-index index} accum)
-                      "On:"      (merge {:on       (extract-date index (:words words))
+                      "On:"      (merge {:on       (extract-date index words)
                                          :on-index index}     accum))))
                 {}
-                (:values words))
-        (extract-merchant (:words words))
+                values)
+        (extract-merchant words)
         (merge {:type :type-6}))))
 
 (defmethod parse-body ["Amount:" "Account:" "On:" "From:"] [mail-body]
@@ -241,7 +243,7 @@
 
   (dump-words (nth @recent 5) {})
 
-  (parse-body (nth @recent 3))
+  (parse-body (nth @recent 1))
 
   (def t-txn (parse-body (nth @recent 3)))
 
