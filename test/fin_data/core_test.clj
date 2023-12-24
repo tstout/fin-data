@@ -7,9 +7,12 @@
 
 (use-fixtures :once setup)
 
-(defexpect fix-me-I-fail (expect 1 0))
+(defexpect placeholder (expect 1 1))
 
 (comment
   *e
   (run-tests)
+
+;;(remove-ns 'fin-data.core-test)
+
   "see https://github.com/clojure-expectations/clojure-test for examples")

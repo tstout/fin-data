@@ -237,13 +237,17 @@
 
   (count @recent)
 
+  (pprint (nth @recent 2))
+
+  
+
     ;;(extract-body (nth @recent 2))
 
     ;;(nth @recent 3)
 
   (dump-words (nth @recent 5) {})
 
-  (parse-body (nth @recent 1))
+  (parse-body (nth @recent 2))
 
   (def t-txn (parse-body (nth @recent 3)))
 
