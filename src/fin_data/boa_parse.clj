@@ -111,7 +111,21 @@
   [:type-2])
 
 (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
-  [:type-3])
+  (let [{:keys [words values]} (locate-words-of-interest
+                                mail-body
+                                #{"Amount:" "Where:" "When:"})]
+    (-> (reduce (fn [accum coordinate]
+                  (let [[index pos-key] coordinate]
+                    #_(prn (format "index: %d pos-key: %s" index pos-key))
+                    (case pos-key
+                      "Amount:"  (merge {:amt (extract-amt index words)} accum)
+                      "Where:"   (merge {:at-index index} accum)
+                      "When:"    (merge {:on       (string/join " " (subvec words (+ 2 index) (+ 5 index)))
+                                         :on-index index}     accum))))
+                {}
+                values)
+        (extract-merchant words)
+        (merge {:type :type-3}))))
 
 (defmethod parse-body ["Amount:" "Type:" "Account:" "Merchant:" "date:"] [mail-body]
   [:type-4])
@@ -239,15 +253,13 @@
 
   (pprint (nth @recent 2))
 
-  
-
-    ;;(extract-body (nth @recent 2))
+;;(extract-body (nth @recent 2))
 
     ;;(nth @recent 3)
 
   (dump-words (nth @recent 5) {})
 
-  (parse-body (nth @recent 2))
+  (parse-body (nth @recent 1))
 
   (def t-txn (parse-body (nth @recent 3)))
 
@@ -260,10 +272,7 @@
   ;; This is what you need to filter in some cases
   (not (Character/isDigit (first "a23:")))
 
-  (vec (extract-keys "type-5.txt"))
-  (= #{1 2 3} #{3 2 1})
-
-  ;; Parsing body words can result in this:
+;; Parsing body words can result in this:
   (frequencies
    ["Account:" "Amount:" "at:" "On:"
     "Account:" "Amount:" "at:" "On:"
