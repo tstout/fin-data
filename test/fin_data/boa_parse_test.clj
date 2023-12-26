@@ -23,6 +23,21 @@
                    107.96M                               amt)
           (parse-body (load-res :type-3))))
 
+(defexpect parse-type-4
+  (expect (more-of {:keys [merchant amt on type]}
+                   :type-4                                type
+                   "NEW YORK LIFE INS. PREM. Transaction" merchant
+                   "December 15, 2023"                    on
+                   226.64M                                amt)
+          (parse-body (load-res :type-4))))
+
+{:on "December 15, 2023",
+ :on-index 32,
+ :at-index 25,
+ :amt 226.64M,
+ :merchant "NEW YORK LIFE INS. PREM. Transaction",
+ :type :type-4}
+
 ;; {:on "December 16, 2023",
 ;;  :on-index 33,
 ;;  :at-index 21,

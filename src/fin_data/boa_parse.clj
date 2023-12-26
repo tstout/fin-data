@@ -128,7 +128,20 @@
         (merge {:type :type-3}))))
 
 (defmethod parse-body ["Amount:" "Type:" "Account:" "Merchant:" "date:"] [mail-body]
-  [:type-4])
+  (let [{:keys [words values]} (locate-words-of-interest
+                                mail-body
+                                #{"Amount:" "Merchant:" "date:"})]
+    (-> (reduce (fn [accum coordinate]
+                  (let [[index pos-key] coordinate]
+                    (case pos-key
+                      "Amount:"   (merge {:amt (extract-amt index words)} accum)
+                      "Merchant:" (merge {:at-index index} accum)
+                      "date:"     (merge {:on       (extract-date index words)
+                                          :on-index index}     accum))))
+                {}
+                values)
+        (extract-merchant words)
+        (merge {:type :type-4}))))
 
 (defmethod parse-body ["Account:" "Amount:" "at:" "On:" "Account:" "Amount:" "at:" "On:"] [mail-body]
   ;; Same as type-6?
@@ -156,13 +169,17 @@
   [:type-7])
 
 (defmethod parse-body ["transfer:" "Amount:" "date:"] [mail-body]
-  [:type-7])
+  [:type-10])
 
 (defmethod parse-body [] [mail-body]
   [:ignore])
 
 (defmethod parse-body ["amount:" "To:" "on:" "now:" "#:" "information:"] [mail-body]
   [:type-8])
+
+(defmethod parse-body ["Account:"] [mail-body]
+  ;; Statement available email - probably will just ignore this.
+  [:type-9])
 
 ;; (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
 ;;   [:type-4])
@@ -237,6 +254,11 @@
     (doseq [w words]
       (spit "mail-words.txt" (str w \newline) :append true))))
 
+(defn dump-mail-body [mail-body]
+  (spit "email.edn" (with-out-str
+                      (pprint mail-body))))
+
+
 (comment
   *e
   (legacy-date "12-DEC-1990")
@@ -249,17 +271,26 @@
 
   (realized? recent)
 
+  (legacy-date)
+
   (count @recent)
 
-  (pprint (nth @recent 2))
+  (pprint (nth @recent 15))
 
 ;;(extract-body (nth @recent 2))
 
     ;;(nth @recent 3)
 
-  (dump-words (nth @recent 5) {})
+  (dump-words (nth @recent 15) #{})
 
-  (parse-body (nth @recent 1))
+  (dump-mail-body (nth @recent 15))
+  
+  (->>
+   (pprint (nth @recent 15))
+   with-out-str
+   (spit "email-body.edn"))
+
+  (parse-body (nth @recent 15))
 
   (def t-txn (parse-body (nth @recent 3)))
 
