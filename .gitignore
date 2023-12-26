@@ -19,3 +19,4 @@ pom.xml.asc
 .rebel_readline_history
 boa.csv
 mail-words.txt
+email.edn

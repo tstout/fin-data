@@ -70,6 +70,18 @@
         merchant (string/join " " (subvec words (+ 1 at-index) on-index))]
     (merge txn {:merchant merchant})))
 
+(defn extract-depositor [txn words]
+  ;; This is a bit of a punt at the moment.
+  ;; The pattern of parsing for merchant/depositor breaks down
+  ;; here. There is nothing in the text to indicate the end of the
+  ;; depositor description. This merely truncates after so many words.
+  ;; Ugly, but likely no prolbem for my purposes.
+  (let [{:keys [at-index on-index]} txn
+        merchant (string/join
+                  " "
+                  (subvec words (+ 1 at-index) (min (+ 7 at-index) (count words))))]
+    (merge txn {:merchant merchant})))
+
 (defn locate-words-of-interest
   "Given a vector of words extracted from an email body and a set of words of interest,
    determine the index within that vector of key elements within the email. 
@@ -96,6 +108,7 @@
 (defn extract-amt [index words]
   (-> (subvec words (+ 1 index) (+ 3 index))
       last
+      (string/replace #"," "")
       bigdec))
 
 (defn extract-date [index words]
@@ -166,7 +179,21 @@
         (merge {:type :type-6}))))
 
 (defmethod parse-body ["Amount:" "Account:" "On:" "From:"] [mail-body]
-  [:type-7])
+  (let [{:keys [words values]} (locate-words-of-interest
+                                mail-body
+                                #{"Amount:" "From:" "On:"})]
+    (-> (reduce (fn [accum coordinate]
+                  (let [[index pos-key] coordinate]
+                    #_(prn (format "index: %d pos-key: %s" index pos-key))
+                    (case pos-key
+                      "Amount:"  (merge {:amt (extract-amt index words)} accum)
+                      "From:"    (merge {:at-index index} accum)
+                      "On:"      (merge {:on       (extract-date index words)
+                                         :on-index index}     accum))))
+                {}
+                values)
+        (extract-depositor words)
+        (merge {:type :type-7}))))
 
 (defmethod parse-body ["transfer:" "Amount:" "date:"] [mail-body]
   [:type-10])
@@ -180,13 +207,6 @@
 (defmethod parse-body ["Account:"] [mail-body]
   ;; Statement available email - probably will just ignore this.
   [:type-9])
-
-;; (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
-;;   [:type-4])
-
-;; TODO - this is going to vary. Need to compute the end of the 
-;; merchant via the index difference of On: and at:
-;; Obvious option is to reduce on the coll of coordinate vectors
 
 (defn- process-txn
   "Reduce on this txn structure ([index pos-key] ...):
@@ -258,10 +278,13 @@
   (spit "email.edn" (with-out-str
                       (pprint mail-body))))
 
-
 (comment
   *e
   (legacy-date "12-DEC-1990")
+
+  (require 'user)
+  (user/trace! #'extract-merchant)
+  (user/untrace! #'extract-merchant)
 
   (.parse (SimpleDateFormat. "dd-MMM-yyyy") "05-May-1970")
 
@@ -271,9 +294,9 @@
 
   (realized? recent)
 
-  (legacy-date)
-
   (count @recent)
+
+  (bigdec "4691.33")
 
   (pprint (nth @recent 15))
 
@@ -281,16 +304,19 @@
 
     ;;(nth @recent 3)
 
-  (dump-words (nth @recent 15) #{})
+  (dump-words (nth @recent 38) #{"Amount:" "From:" "On:"})
 
-  (dump-mail-body (nth @recent 15))
-  
+  (locate-words-of-interest (nth @recent 38) #{"Amount:" "From:" "On:"})
+
+  (dump-mail-body (nth @recent 38))
+
   (->>
    (pprint (nth @recent 15))
    with-out-str
    (spit "email-body.edn"))
 
-  (parse-body (nth @recent 15))
+  (string/replace "4,691.33" #"," "")
+  (parse-body (nth @recent 38))
 
   (def t-txn (parse-body (nth @recent 3)))
 
@@ -316,6 +342,8 @@
    ["Account:" "Amount:" "at:" "On:"
     "Account:" "Amount:" "at:" "On:"
     "Account:" "Amount:" "at:" "On:"])
+
+  (min 4 0)
 
 ;;
   )

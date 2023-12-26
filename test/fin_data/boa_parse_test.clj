@@ -15,6 +15,14 @@
                    26.19M                                amt)
           (parse-body (load-res :type-6))))
 
+(defexpect parse-type-7
+  (expect (more-of {:keys [merchant amt on type]}
+                   :type-7                               type
+                   "ACME PAYROLL EXT DIR DEP View"       merchant
+                   "December 21, 2023"                   on
+                   1691.33M                              amt)
+          (parse-body (load-res :type-7))))
+
 (defexpect parse-type-3
   (expect (more-of {:keys [merchant amt on type]}
                    :type-3                               type
@@ -30,13 +38,6 @@
                    "December 15, 2023"                    on
                    226.64M                                amt)
           (parse-body (load-res :type-4))))
-
-{:on "December 15, 2023",
- :on-index 32,
- :at-index 25,
- :amt 226.64M,
- :merchant "NEW YORK LIFE INS. PREM. Transaction",
- :type :type-4}
 
 ;; {:on "December 16, 2023",
 ;;  :on-index 33,
