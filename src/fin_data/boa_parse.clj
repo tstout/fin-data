@@ -79,7 +79,10 @@
   (let [{:keys [at-index on-index]} txn
         merchant (string/join
                   " "
-                  (subvec words (+ 1 at-index) (min (+ 7 at-index) (count words))))]
+                  (subvec 
+                   words 
+                   (+ 1 at-index) 
+                   (min (+ 7 at-index) (count words))))]
     (merge txn {:merchant merchant})))
 
 (defn locate-words-of-interest
@@ -250,18 +253,6 @@
    (recent-boa (fetch-account "http://localhost:8080/v1/config/account/gmail-tstout"))
    #(map extract-values-of-interest %)))
 
-;; Use extract-keys and dump-words to look at the shape of the 
-;; email words. 
-(defn extract-keys
-  "It is expected that the format of emails from BOA will change over time.
-   Use this fn in a REPL to view the possible key strings from the vector of email body
-   words stored in a resource file."
-  [email-words]
-  (->> email-words
-       io/resource
-       slurp
-       string/split-lines
-       (filter #(string/ends-with? % ":"))))
 
 (defn dump-words
   "Dump the word vector from an email into a file named
@@ -280,8 +271,7 @@
 
 (comment
   *e
-  (legacy-date "12-DEC-1990")
-
+  
   (require 'user)
   (user/trace! #'extract-merchant)
   (user/untrace! #'extract-merchant)
@@ -296,13 +286,7 @@
 
   (count @recent)
 
-  (bigdec "4691.33")
-
   (pprint (nth @recent 15))
-
-;;(extract-body (nth @recent 2))
-
-    ;;(nth @recent 3)
 
   (dump-words (nth @recent 38) #{"Amount:" "From:" "On:"})
 
@@ -310,22 +294,13 @@
 
   (dump-mail-body (nth @recent 38))
 
-  (->>
-   (pprint (nth @recent 15))
-   with-out-str
-   (spit "email-body.edn"))
+  (parse-body (nth @recent 57))
 
-  (string/replace "4,691.33" #"," "")
-  (parse-body (nth @recent 38))
+  (def parsings (map parse-body @recent))
 
-  (def t-txn (parse-body (nth @recent 3)))
-
-  t-txn
-
-  (extract-values-of-interest (nth @recent 3) #{"Amount:" "at:" "On:"})
-
-  (second @recent)
-
+  (filter #(string/includes? % "USAA") parsings)
+  (filter #(string/includes? % "COPPELL ISD") parsings)
+    
   ;; This is what you need to filter in some cases
   (not (Character/isDigit (first "a23:")))
 
@@ -334,16 +309,6 @@
    ["Account:" "Amount:" "at:" "On:"
     "Account:" "Amount:" "at:" "On:"
     "Account:" "Amount:" "at:" "On:"])
-
-  ;; distinct can find the pattern needed for defmethod
-  ;; parse methods should assume their might be more than one
-  ;; txn
-  (distinct
-   ["Account:" "Amount:" "at:" "On:"
-    "Account:" "Amount:" "at:" "On:"
-    "Account:" "Amount:" "at:" "On:"])
-
-  (min 4 0)
 
 ;;
   )
