@@ -1,8 +1,10 @@
 {:deps    {org.clojure/tools.cli             {:mvn/version "0.3.5"}
-           io.github.tstout/sys-loader       {:git/tag "v1.1.5"
-                                              :git/sha "3e9a6e1"}
-           io.github.tstout/ring-module      {:git/tag "v1.0.3"
-                                              :git/sha "f9791bb"}
+           org.clojure/core.async            {:mvn/version "1.6.681"}
+           io.github.tstout/sys-loader       {:local/root "../sys-loader"}
+        ;;    io.github.tstout/sys-loader       {:git/tag "v1.1.5"
+        ;;                                       :git/sha "3e9a6e1"}
+        ;;    io.github.tstout/ring-module      {:git/tag "v1.0.3"
+        ;;                                       :git/sha "f9791bb"}
            com.github.tstout/conceal         {:git/url "https://github.com/tstout/conceal"
                                               :git/tag "v1.0.0"
                                               :git/sha "e9ab405"}

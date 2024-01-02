@@ -39,13 +39,6 @@
                    226.64M                                amt)
           (parse-body (load-res :type-4))))
 
-;; {:on "December 16, 2023",
-;;  :on-index 33,
-;;  :at-index 21,
-;;  :amt 107.96M,
-;;  :merchant "at TST* J MACKLINS GRILL--COPPELL ,TX Transaction type: PURCH W/O PIN",
-;;  :type :type-3}
-
 (comment
   *e
   (run-tests)

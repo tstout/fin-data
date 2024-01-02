@@ -1,7 +1,6 @@
 (ns fin-data.boa-parse
   (:require [clojure-mail.core :refer [search-inbox]]
             [clojure-mail.gmail :as gmail]
-            [clojure.java.io :as io]
             [clojure-mail.message :as message]
             [clojure-mail.parser :refer [html->text]]
             [clojure.pprint :refer [pprint]]
@@ -76,12 +75,12 @@
   ;; here. There is nothing in the text to indicate the end of the
   ;; depositor description. This merely truncates after so many words.
   ;; Ugly, but likely no prolbem for my purposes.
-  (let [{:keys [at-index on-index]} txn
+  (let [{:keys [at-index]} txn
         merchant (string/join
                   " "
-                  (subvec 
-                   words 
-                   (+ 1 at-index) 
+                  (subvec
+                   words
+                   (+ 1 at-index)
                    (min (+ 7 at-index) (count words))))]
     (merge txn {:merchant merchant})))
 
@@ -253,7 +252,6 @@
    (recent-boa (fetch-account "http://localhost:8080/v1/config/account/gmail-tstout"))
    #(map extract-values-of-interest %)))
 
-
 (defn dump-words
   "Dump the word vector from an email into a file named
    mail-words.txt for analysis. See also extract-keys."
@@ -271,12 +269,10 @@
 
 (comment
   *e
-  
+
   (require 'user)
   (user/trace! #'extract-merchant)
   (user/untrace! #'extract-merchant)
-
-  (.parse (SimpleDateFormat. "dd-MMM-yyyy") "05-May-1970")
 
   (def recent (recent-boa
                (fetch-account
@@ -294,13 +290,16 @@
 
   (dump-mail-body (nth @recent 38))
 
-  (parse-body (nth @recent 57))
+  (parse-body (nth @recent 0))
 
   (def parsings (map parse-body @recent))
 
+  (java.net.ServerSocket. 9092)
+  parsings
+
   (filter #(string/includes? % "USAA") parsings)
   (filter #(string/includes? % "COPPELL ISD") parsings)
-    
+
   ;; This is what you need to filter in some cases
   (not (Character/isDigit (first "a23:")))
 

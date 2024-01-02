@@ -72,7 +72,9 @@
 
 (comment
   *e
+  (sys/-main [])
   @sys/sys-state
+  (clojure.pprint/pprint @sys/sys-state)
 
   ;;
       )
