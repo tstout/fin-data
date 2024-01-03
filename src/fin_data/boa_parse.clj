@@ -108,11 +108,15 @@
        distinct
        vec))
 
-(defn extract-amt [index words]
-  (-> (subvec words (+ 1 index) (+ 3 index))
-      last
-      (string/replace #"," "")
-      bigdec))
+(defn extract-amt
+  ([index words sign]
+   (-> (subvec words (+ 1 index) (+ 3 index))
+       last
+       (string/replace #"," "")
+       bigdec
+       (* sign)))
+  ([index words]
+   (extract-amt index words -1)))
 
 (defn extract-date [index words]
   (string/join " " (subvec words (+ 1 index) (+ 4 index))))
@@ -190,7 +194,7 @@
                   (let [[index pos-key] coordinate]
                     #_(prn (format "index: %d pos-key: %s" index pos-key))
                     (case pos-key
-                      "Amount:"  (merge {:amt (extract-amt index words)} accum)
+                      "Amount:"  (merge {:amt (extract-amt index words 1)} accum)
                       "From:"    (merge {:at-index index} accum)
                       "On:"      (merge {:on       (extract-date index words)
                                          :on-index index}     accum))))
