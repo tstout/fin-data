@@ -1,6 +1,7 @@
 (ns fin-data.boa-parse
   (:require [clojure-mail.core :refer [search-inbox]]
             [clojure-mail.gmail :as gmail]
+            [clojure.tools.logging :as log]
             [clojure-mail.message :as message]
             [clojure-mail.parser :refer [html->text]]
             [clojure.pprint :refer [pprint]]
@@ -74,7 +75,7 @@
   ;; The pattern of parsing for merchant/depositor breaks down
   ;; here. There is nothing in the text to indicate the end of the
   ;; depositor description. This merely truncates after so many words.
-  ;; Ugly, but likely no prolbem for my purposes.
+  ;; Ugly, but likely no problem for my purposes.
   (let [{:keys [at-index]} txn
         merchant (string/join
                   " "
@@ -120,9 +121,11 @@
 (defmulti parse-body #'parse-dispatch)
 
 (defmethod parse-body ["Amount:" "at:" "On:"] [mail-body]
+  (log/error "received type-1 mail, need to implement")
   [:type-1])
 
 (defmethod parse-body ["check:" "Amount:" "number:" "date:"] [mail-body]
+  (log/error "received type-2 mail, need to implement")
   [:type-2])
 
 (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
@@ -131,7 +134,6 @@
                                 #{"Amount:" "Where:" "When:"})]
     (-> (reduce (fn [accum coordinate]
                   (let [[index pos-key] coordinate]
-                    #_(prn (format "index: %d pos-key: %s" index pos-key))
                     (case pos-key
                       "Amount:"  (merge {:amt (extract-amt index words)} accum)
                       "Where:"   (merge {:at-index index} accum)
@@ -198,47 +200,23 @@
         (merge {:type :type-7}))))
 
 (defmethod parse-body ["transfer:" "Amount:" "date:"] [mail-body]
+  (log/error "received type-10 mail, need to implement")
   [:type-10])
 
 (defmethod parse-body [] [mail-body]
   [:ignore])
 
 (defmethod parse-body ["amount:" "To:" "on:" "now:" "#:" "information:"] [mail-body]
+  (log/error "received type-8 mail, need to implement")
   [:type-8])
 
 (defmethod parse-body ["Account:"] [mail-body]
   ;; Statement available email - probably will just ignore this.
   [:type-9])
 
-(defn- process-txn
-  "Reduce on this txn structure ([index pos-key] ...):
-  ([19 \"Amount:\"] [24 \"at:\"] [28 \"On:\"]) 
-  words is a collection of the words making up the mail body"
-  [txn words]
-  ;;(prn txn)
-  ;; TODO - consider using the case to populate indices needed
-  ;; for merchant range calc and add a final map operation to add
-  ;; The merchant def...seems clean...implement this.
-  (-> (reduce (fn [accum coordinate]
-                (let [[index pos-key] coordinate]
-                  #_(prn (format "index: %d pos-key: %s" index pos-key))
-                  (case pos-key
-                    "Amount:"  (merge {:amt (extract-amt index words)} accum)
-                    "at:"      (merge {:at-index index} accum)
-                    "Merchant" (merge {:at-index index} accum)
-                    "On:"      (merge {:on       (extract-date index words)
-                                       :on-index index}     accum)
-                    "date:"    (merge {:on       (extract-date index words)
-                                       :on-index index}     accum))))
-              {}
-              txn)
-      (extract-merchant words)))
-
-(defn extract-values-of-interest [mail-body key-set]
-  (let [{:keys [words values]} (locate-words-of-interest mail-body key-set)
-        txns                   (partition-all 3 values)]
-    #_(prn txns)
-    (map #(process-txn %1 words) txns)))
+(defmethod parse-body ["days:" "Item:" "Amount:" "Date:" "To:" "Fee:" "Service:" "policy:" "Lender:" "to:"] [mail-body]
+  ;; Online transfer reminder..ignore?
+  [:type-11])
 
 (defn when-done
   "Invoke a fn when a future completes. Returns a future wrapping the result
@@ -247,10 +225,13 @@
   (future (fn-to-call @future-to-watch)))
 
 ;; TODO - I think the map here is only processing the first txn
+;; Need to catch exception if parse-body throws
+;; Location of conf-service needs to be configurable (cmd-line arg?)
 (defn extract-values-from-txns []
   (when-done
-   (recent-boa (fetch-account "http://localhost:8080/v1/config/account/gmail-tstout"))
-   #(map extract-values-of-interest %)))
+   (recent-boa (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout"))
+   (fn [fut-result] (map parse-body fut-result))))
 
 (defn dump-words
   "Dump the word vector from an email into a file named
@@ -280,9 +261,11 @@
 
   (realized? recent)
 
-  (count @recent)
+  (def parsings (extract-values-from-txns))
 
-  (pprint (nth @recent 15))
+  (realized? parsings)
+  (count @parsings)
+  parsings
 
   (dump-words (nth @recent 38) #{"Amount:" "From:" "On:"})
 
@@ -294,13 +277,10 @@
 
   (def parsings (map parse-body @recent))
 
-  (java.net.ServerSocket. 9092)
-  parsings
+  (filter #(string/includes? % "USAA") @parsings)
+  (filter #(string/includes? % "COPPELL ISD") @parsings)
 
-  (filter #(string/includes? % "USAA") parsings)
-  (filter #(string/includes? % "COPPELL ISD") parsings)
-
-  ;; This is what you need to filter in some cases
+  ;; This is what you need to filter in some cases?
   (not (Character/isDigit (first "a23:")))
 
 ;; Parsing body words can result in this:

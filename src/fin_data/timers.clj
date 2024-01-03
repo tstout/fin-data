@@ -1,6 +1,10 @@
 (ns fin-data.timers
   (:require [clojure.core.async :refer [go-loop chan alt! timeout put!]]))
 
+;; TODO - considering adding ability to run at a specific
+;; time of day (desired date/time - current data/time in ms)
+;; For now, this feature is not necessary.
+
 (defn- run
   [msecs f]
   (let [stop-ch (chan)]
@@ -11,7 +15,7 @@
         stop-ch nil))
     stop-ch))
 
-(defn run-periodically [msecs f]
+(defn periodic-fn [msecs f]
   {:pre [(fn? f) (int? msecs)]}
   (let
    [stop-ch   (atom (run msecs f))
@@ -20,7 +24,7 @@
     (fn [operation & args] (-> (timer-ops operation) (apply args)))))
 
 (comment
-  (def tmr (run-periodically 5000 #(println "Fn executed!")))
+  (def tmr (periodic-fn 5000 #(println "Fn executed!")))
   (tmr :stop)
   (tmr :start)
 
