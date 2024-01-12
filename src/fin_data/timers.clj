@@ -1,5 +1,6 @@
 (ns fin-data.timers
-  (:require [clojure.core.async :refer [go-loop chan alt! timeout put!]]))
+  (:require [clojure.core.async :refer [go-loop chan alt! timeout put!]]
+            [clojure.tools.logging :as log]))
 
 ;; TODO - considering adding ability to run at a specific
 ;; time of day (desired date/time - current data/time in ms)
@@ -11,8 +12,12 @@
   (let [stop-ch (chan)]
     (go-loop []
       (alt!
-        (timeout msecs) (do (f)
-                            (recur))
+        (timeout msecs) (do
+                          (try
+                            (f)
+                            (catch Exception e
+                              (log/error e "periodic-fn exception")))
+                          (recur))
         stop-ch nil))
     stop-ch))
 
@@ -29,8 +34,8 @@
   (def tmr-ex (periodic-fn 5000 #(throw (Exception. "Fn executed!"))))
 
   (tmr-ex :stop)
-    (tmr :stop)
-    (tmr :start)
+  (tmr :stop)
+  (tmr :start)
 
 ;;
-    )
+  )

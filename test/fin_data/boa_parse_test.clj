@@ -12,7 +12,7 @@
                    :type-6                               type
                    "DD *DOORDASH CAVA -SAN FRANCISCO,CA" merchant
                    "December 16, 2023"                   on
-                   26.19M                                amt)
+                   -26.19M                                amt)
           (parse-body (load-res :type-6))))
 
 (defexpect parse-type-7
@@ -28,7 +28,7 @@
                    :type-3                               type
                    "at TST* J MACKLINS GRILL--COPPELL ,TX Transaction type: PURCH W/O PIN" merchant
                    "December 16, 2023"                   on
-                   107.96M                               amt)
+                   -107.96M                               amt)
           (parse-body (load-res :type-3))))
 
 (defexpect parse-type-4
@@ -36,7 +36,7 @@
                    :type-4                                type
                    "NEW YORK LIFE INS. PREM. Transaction" merchant
                    "December 15, 2023"                    on
-                   226.64M                                amt)
+                   -226.64M                                amt)
           (parse-body (load-res :type-4))))
 
 (comment

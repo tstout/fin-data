@@ -217,6 +217,13 @@
   ;; Online transfer reminder..ignore?
   [:type-11])
 
+(defmethod parse-body ["Amount:" "Account:" "On:" "From:" "number:"] [mail-body]
+  ;; Deposit - multiple transactions indicated by number
+  ;; Need to deal with multiple txns here
+  [:type-12])
+
+;;["Amount:" "Account:" "On:" "From:" "number:"]
+
 (defn when-done
   "Invoke a fn when a future completes. Returns a future wrapping the result
    of the fn to call."
@@ -259,6 +266,14 @@
 (comment
   *e
 
+  (def recent (recent-boa (fetch-account
+                           "http://localhost:8080/v1/config/account/gmail-tstout")))
+
+  (realized? recent)
+
+  (dump-mail-body (nth @recent 3))
+
+
   (def poll (poller))
   (poll :start)
   (poll :stop)
@@ -273,10 +288,6 @@
   (count @parsings)
   parsings
 
-  (doseq [txn @parsings]
-    (insert-checking txn))
-
-  (insert-checking (first @parsings))
 
   (first @parsings)
 
