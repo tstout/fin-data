@@ -3,10 +3,12 @@
             [clojure-mail.gmail :as gmail]
             [clojure.tools.logging :as log]
             [clojure-mail.message :as message]
+            [fin-data.db-io :refer [insert-checking]]
             [clojure-mail.parser :refer [html->text]]
             [clojure.pprint :refer [pprint]]
             [clojure.string :as string :refer [includes? starts-with?]]
-            [fin-data.creds :refer [fetch-account]])
+            [fin-data.creds :refer [fetch-account]]
+            [fin-data.timers :refer [periodic-fn]])
   (:import [java.text SimpleDateFormat]))
 
 (defn legacy-date
@@ -41,12 +43,6 @@
             (find-in-inbox [:received-after after-date])
             (filter #(let [addr (-> % :from first :address)]
                        (includes? addr "bankofamerica"))))))))
-
-(defn boa-alerts [m]
-  (->> m
-       (find-in-inbox "Bank Of America")
-       (map message/read-message)
-       vec))
 
 ;; TODO do some nested map destructuring here
 (defn extract-body [msg]
@@ -192,7 +188,6 @@
                                 #{"Amount:" "From:" "On:"})]
     (-> (reduce (fn [accum coordinate]
                   (let [[index pos-key] coordinate]
-                    #_(prn (format "index: %d pos-key: %s" index pos-key))
                     (case pos-key
                       "Amount:"  (merge {:amt (extract-amt index words 1)} accum)
                       "From:"    (merge {:at-index index} accum)
@@ -237,6 +232,15 @@
                 "http://localhost:8080/v1/config/account/gmail-tstout"))
    (fn [fut-result] (map parse-body fut-result))))
 
+(defn poller []
+  (periodic-fn (* 1000 60 30)
+               (fn []
+                 (log/info "Excecuting email poll...")
+                 (let [parsings (deref (extract-values-from-txns))]
+                   (log/infof "Found %d transactions...inserting" (count parsings))
+                   (doseq [txn parsings]
+                     (insert-checking txn))))))
+
 (defn dump-words
   "Dump the word vector from an email into a file named
    mail-words.txt for analysis. See also extract-keys."
@@ -255,15 +259,13 @@
 (comment
   *e
 
+  (def poll (poller))
+  (poll :start)
+  (poll :stop)
+
   (require 'user)
   (user/trace! #'extract-merchant)
   (user/untrace! #'extract-merchant)
-
-  (def recent (recent-boa
-               (fetch-account
-                "http://localhost:8080/v1/config/account/gmail-tstout")))
-
-  (realized? recent)
 
   (def parsings (extract-values-from-txns))
 
@@ -271,15 +273,12 @@
   (count @parsings)
   parsings
 
-  (dump-words (nth @recent 38) #{"Amount:" "From:" "On:"})
+  (doseq [txn @parsings]
+    (insert-checking txn))
 
-  (locate-words-of-interest (nth @recent 38) #{"Amount:" "From:" "On:"})
+  (insert-checking (first @parsings))
 
-  (dump-mail-body (nth @recent 38))
-
-  (parse-body (nth @recent 0))
-
-  (def parsings (map parse-body @recent))
+  (first @parsings)
 
   (filter #(string/includes? % "USAA") @parsings)
   (filter #(string/includes? % "COPPELL ISD") @parsings)

@@ -3,7 +3,9 @@
             [sys-loader.core :as sys]
             [next.jdbc.result-set :as rs]
             [next.jdbc :as jdbc]
-            [fin-data.md5 :refer [md5]]))
+            [fin-data.md5 :refer [md5]]
+            [fin-data.md5 :refer [md5]])
+  (:import [java.text SimpleDateFormat]))
 
 (defn data-src
   "Grab the datasource from the sys-loader context"
@@ -67,7 +69,6 @@
            conn
            [(sql-text :update-md5) md5 id]))))))
 
-
 (defn import-csv
   "Import BOA CSV file into import table
    finkratzen.boa_import"
@@ -77,8 +78,24 @@
     (jdbc/execute-one! conn
                        [(csv-import-sql)])))
 
+(defn insert-checking [bank-txn]
+  (with-open [conn (jdbc/get-connection (data-src))]
+    (let [{:keys [amt merchant on]} bank-txn
+          chksum (md5 (str amt merchant on))]
+      (jdbc/execute-one! conn
+                         [(sql-text :insert-checking)
+                          chksum
+                          (-> (SimpleDateFormat. "MMM DD, yyyy")
+                              (.parse on))
+                          amt
+                          merchant]))))
+
 (comment
   *e
+
+  (-> (SimpleDateFormat. "MMM DD, yyyy")
+      (.parse "January 08, 2024"))
+
   (update-md5!)
   (select-import)
   (first (calc-md5))
@@ -88,6 +105,7 @@
 
   (time select-import)
   (sql-text :update-md5)
+  (sql-text :insert-checking)
   (sql-text :select-boa-import)
   (data-src)
   (import-csv)

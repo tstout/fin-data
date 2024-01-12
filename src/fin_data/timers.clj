@@ -4,7 +4,8 @@
 ;; TODO - considering adding ability to run at a specific
 ;; time of day (desired date/time - current data/time in ms)
 ;; For now, this feature is not necessary.
-
+;; Also, consider adding some stats: last invocation exception,
+;; invocation count, exception count
 (defn- run
   [msecs f]
   (let [stop-ch (chan)]
@@ -25,8 +26,11 @@
 
 (comment
   (def tmr (periodic-fn 5000 #(println "Fn executed!")))
-  (tmr :stop)
-  (tmr :start)
+  (def tmr-ex (periodic-fn 5000 #(throw (Exception. "Fn executed!"))))
+
+  (tmr-ex :stop)
+    (tmr :stop)
+    (tmr :start)
 
 ;;
-  )
+    )
