@@ -220,6 +220,7 @@
 (defmethod parse-body ["Amount:" "Account:" "On:" "From:" "number:"] [mail-body]
   ;; Deposit - multiple transactions indicated by number
   ;; Need to deal with multiple txns here
+  (log/info "received type-12 mail, need to implement")
   [:type-12])
 
 ;;["Amount:" "Account:" "On:" "From:" "number:"]
@@ -239,13 +240,13 @@
                 "http://localhost:8080/v1/config/account/gmail-tstout"))
    (fn [fut-result] (map parse-body fut-result))))
 
-(defn poller []
-  (periodic-fn (* 1000 60 30)
+(defn poller [minutes]
+  (periodic-fn (* 1000 60 minutes)
                (fn []
                  (log/info "Excecuting email poll...")
-                 (let [parsings (deref (extract-values-from-txns))]
+                 (let [parsings @(extract-values-from-txns)]
                    (log/infof "Found %d transactions...inserting" (count parsings))
-                   (doseq [txn parsings]
+                   (doseq [txn (filter map? parsings)]
                      (insert-checking txn))))))
 
 (defn dump-words
@@ -273,8 +274,7 @@
 
   (dump-mail-body (nth @recent 3))
 
-
-  (def poll (poller))
+  (def poll (poller 1))
   (poll :start)
   (poll :stop)
 
@@ -288,20 +288,10 @@
   (count @parsings)
   parsings
 
-
   (first @parsings)
-
-  (filter #(string/includes? % "USAA") @parsings)
-  (filter #(string/includes? % "COPPELL ISD") @parsings)
 
   ;; This is what you need to filter in some cases?
   (not (Character/isDigit (first "a23:")))
-
-;; Parsing body words can result in this:
-  (frequencies
-   ["Account:" "Amount:" "at:" "On:"
-    "Account:" "Amount:" "at:" "On:"
-    "Account:" "Amount:" "at:" "On:"])
 
 ;;
   )
