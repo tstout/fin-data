@@ -3,6 +3,8 @@
             [clojure.string :as string]
             [clojure.tools.logging :as log]
             [sys-loader.core :as sys]
+            [sys-loader.bootstrap :as sys-boot]
+            [fin-data.boa-parse :as boa]
             [fin-data.ddl :as ddl])
   (:gen-class))
 
@@ -47,7 +49,6 @@
       :else ; failed custom validation => exit with usage summary
       {:exit-message (usage summary)})))
 
-
 (defn exit [status msg]
   (println msg)
   (System/exit status))
@@ -59,8 +60,8 @@
       (case action
         "server" (do
                    (sys/-main args)
-                   (log/debug "fin-data server init complete"))))))
-
+                   (log/debug "fin-data server init complete")
+                   @boa/email-poller)))))
 
 (defn init
   "The sys-module initialization fn. This configures the DB schema."
@@ -69,12 +70,11 @@
     (ddl/exec-ddl migrate)
     (log/info "fin-data module init complete")))
 
-
 (comment
   *e
   (sys/-main [])
-  @sys/sys-state
-  (clojure.pprint/pprint @sys/sys-state)
+  @sys-boot/sys-state
+  (clojure.pprint/pprint @sys-boot/sys-state)
 
   ;;
-      )
+  )

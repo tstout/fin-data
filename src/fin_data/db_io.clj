@@ -1,16 +1,15 @@
 (ns fin-data.db-io
   (:require [clojure.java.io :as io]
-            [sys-loader.core :as sys]
+            [sys-loader.bootstrap :as sys-boot]
             [next.jdbc.result-set :as rs]
             [next.jdbc :as jdbc]
-            [fin-data.md5 :refer [md5]]
             [fin-data.md5 :refer [md5]])
   (:import [java.text SimpleDateFormat]))
 
 (defn data-src
   "Grab the datasource from the sys-loader context"
   []
-  (-> @sys/sys-state
+  (-> @sys-boot/sys-state
       :sys/db
       :data-source))
 

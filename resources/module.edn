@@ -1,4 +1,4 @@
 [{:sys/description "fin data"
   :sys/name        :fin-data/service
-  :sys/deps        [:sys/logging :sys/migrations :sys/db]
+  :sys/deps        []
   :sys/init        fin-data.core/init}]

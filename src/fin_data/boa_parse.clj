@@ -41,7 +41,7 @@
      (future
        (->> m
             (find-in-inbox [:received-after after-date])
-            (filter #(let [addr (-> % :from first :address)]
+            (filter #(let [addr (or (-> % :from first :address) "unknown")]
                        (includes? addr "bankofamerica"))))))))
 
 ;; TODO do some nested map destructuring here
@@ -249,6 +249,10 @@
                    (doseq [txn (filter map? parsings)]
                      (insert-checking txn))))))
 
+(def email-poller
+  (delay (poller 5)
+         (log/info "Email poller started - 5 minute interval")))
+
 (defn dump-words
   "Dump the word vector from an email into a file named
    mail-words.txt for analysis. See also extract-keys."
@@ -274,7 +278,7 @@
 
   (dump-mail-body (nth @recent 3))
 
-  (def poll (poller 1))
+  (def poll (poller 2))
   (poll :start)
   (poll :stop)
 

@@ -1,5 +1,5 @@
 (ns fin-data.ddl
-  (:require [sys-loader.core :as sys]))
+  (:require [sys-loader.bootstrap :as sys-boot]))
 
 (defn init-schema [run-ddl]
   (run-ddl "init-schema"))
@@ -17,7 +17,7 @@
 (comment
   *e
 
-  (-> @sys/sys-state
+  (-> @sys-boot/sys-state
       :sys/migrations
       exec-ddl)
   ;;
