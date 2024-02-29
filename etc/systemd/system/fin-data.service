@@ -1,0 +1,11 @@
+[Unit]
+Description=Fin Data
+After=syslog.target
+
+[Service]
+ExecStart=/home/pi/src/fin-data/run.sh
+WorkingDirectory=/home/pi/src/fin-data
+User=pi
+
+[Install]
+WantedBy=multi-user.target
