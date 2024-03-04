@@ -124,8 +124,12 @@
   (log/error "received type-1 mail, need to implement")
   [:type-1])
 
+(defmethod parse-body ["with:" "immediately:"] [_]
+  (log/info "Ignoring [with: immediately:]")
+  [:type-13])
+
 (defmethod parse-body ["check:" "Amount:" "number:" "date:"] [mail-body]
-  (log/error "received type-2 mail, need to implement")
+  (log/error "received type-2 mail, need to implemen`t")
   [:type-2])
 
 (defmethod parse-body ["Amount:" "card:" "Where:" "type:" "When:"] [mail-body]
