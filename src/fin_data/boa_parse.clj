@@ -128,6 +128,10 @@
   (log/info "Ignoring [with: immediately:]")
   [:type-13])
 
+(defmethod parse-body ["2024:" "#:" "Amount:" "To:" "Fee:" "Service:" "policy:" "Lender:" "to:"] [_]
+  (log/info "Ignoring :type-14")
+  [:type-14])
+
 (defmethod parse-body ["check:" "Amount:" "number:" "date:"] [mail-body]
   (log/error "received type-2 mail, need to implemen`t")
   [:type-2])
