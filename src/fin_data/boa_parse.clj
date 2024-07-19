@@ -252,7 +252,7 @@
   (when-done
    (recent-boa (fetch-account
                 "http://localhost:8080/v1/config/account/gmail-tstout")
-               "02-Jul-2024")
+               #_"02-Jul-2024")
    (fn [fut-result] (map parse-body fut-result))))
 
 (defn poller [minutes]
@@ -265,8 +265,8 @@
                      (insert-checking txn))))))
 
 (def email-poller
-  (delay (poller 10)
-         (log/info "Email poller started - 10 minute interval")))
+  (delay (poller 5)
+         (log/info "Email poller started - 5 minute interval")))
 
 (defn dump-words
   "Dump the word vector from an email into a file named
