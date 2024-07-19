@@ -134,6 +134,10 @@
   (log/info "Ignoring :type-14")
   [:type-14])
 
+(defmethod parse-body ["Note:"] [_mail-body]
+  (log/info "Ignoring :type-15")
+  [:type-15])
+
 (defmethod parse-body ["check:" "Amount:" "number:" "date:"] [mail-body]
   (log/error "received type-2 mail, need to implemen`t")
   [:type-2])
