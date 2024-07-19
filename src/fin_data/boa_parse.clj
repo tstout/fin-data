@@ -31,7 +31,9 @@
 (defn recent-boa
   "Expensive operation, given the typical size of my inbox. Returns a 
    future so that interaction in a repl won't get blocked for a long 
-   period of time"
+   period of time. The default time frame is process emails from last 24 hours.
+   Provide a second argument of a string representing the up-to date in the form
+   dd-MM-YYY"
   ([m]
    (recent-boa m :yesterday))
   ([m received-after-date]
@@ -217,7 +219,7 @@
   (log/error "received type-8 mail, need to implement")
   [:type-8])
 
-(defmethod parse-body ["Account:"] [mail-body]
+(defmethod parse-body ["Account:"] [_mail-body]
   ;; Statement available email - probably will just ignore this.
   [:type-9])
 
@@ -225,7 +227,7 @@
   ;; Online transfer reminder..ignore?
   [:type-11])
 
-(defmethod parse-body ["Amount:" "Account:" "On:" "From:" "number:"] [mail-body]
+(defmethod parse-body ["Amount:" "Account:" "On:" "From:" "number:"] [_mail-body]
   ;; Deposit - multiple transactions indicated by number
   ;; Need to deal with multiple txns here
   (log/info "received type-12 mail, need to implement")
@@ -245,7 +247,8 @@
 (defn extract-values-from-txns []
   (when-done
    (recent-boa (fetch-account
-                "http://localhost:8080/v1/config/account/gmail-tstout"))
+                "http://localhost:8080/v1/config/account/gmail-tstout")
+               "02-Jul-2024")
    (fn [fut-result] (map parse-body fut-result))))
 
 (defn poller [minutes]
@@ -258,8 +261,8 @@
                      (insert-checking txn))))))
 
 (def email-poller
-  (delay (poller 5)
-         (log/info "Email poller started - 5 minute interval")))
+  (delay (poller 10)
+         (log/info "Email poller started - 10 minute interval")))
 
 (defn dump-words
   "Dump the word vector from an email into a file named
@@ -280,9 +283,13 @@
   *e
 
   (def recent (recent-boa (fetch-account
-                           "http://localhost:8080/v1/config/account/gmail-tstout")))
+                           "http://localhost:8080/v1/config/account/gmail-tstout")
+                          "02-Jul-2024"))
 
   (realized? recent)
+
+  (nth @recent 2)
+  (count @recent)
 
   (dump-mail-body (nth @recent 3))
 
@@ -301,6 +308,8 @@
   parsings
 
   (first @parsings)
+
+  (legacy-date "02-Jul-2024")
 
   ;; This is what you need to filter in some cases?
   (not (Character/isDigit (first "a23:")))

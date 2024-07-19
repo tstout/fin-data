@@ -2,6 +2,9 @@
   (:require [clojure.core.async :refer [go-loop chan alt! timeout put!]]
             [clojure.tools.logging :as log]))
 
+;; based this on https://stackoverflow.com/a/53559455/59768
+;; Stop does not actually kill the go block however
+
 ;; TODO - considering adding ability to run at a specific
 ;; time of day (desired date/time - current data/time in ms)
 ;; For now, this feature is not necessary.

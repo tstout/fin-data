@@ -4,7 +4,20 @@
             [next.jdbc.result-set :as rs]
             [next.jdbc :as jdbc]
             [fin-data.md5 :refer [md5]])
-  (:import [java.text SimpleDateFormat]))
+  (:import [java.text SimpleDateFormat]
+           [java.time.format DateTimeFormatter FormatStyle]
+           [java.time LocalDate]
+           [java.sql Date]))
+
+(defn to-sql-date
+  "Convert date string of the format April 09, 2024 to a 
+   java.sql Date object."
+  [date-str]
+  (-> FormatStyle/LONG
+      DateTimeFormatter/ofLocalizedDate
+      (.parse date-str)
+      LocalDate/from
+      Date/valueOf))
 
 (defn data-src
   "Grab the datasource from the sys-loader context"
@@ -84,16 +97,26 @@
       (jdbc/execute-one! conn
                          [(sql-text :insert-checking)
                           chksum
-                          (-> (SimpleDateFormat. "MMM DD, yyyy")
-                              (.parse on))
+                          (to-sql-date on)
                           amt
                           merchant]))))
 
 (comment
   *e
+  ;; example formatter
+  ;; https://www.baeldung.com/java-datetimeformatter
 
-  (-> (SimpleDateFormat. "MMM DD, yyyy")
-      (.parse "January 08, 2024"))
+  ;; This was an issue causing posting date to be wrong. 
+  ;; Apparently SimpleDateFormat is broken here, month is 
+  ;; always January.
+  (-> (SimpleDateFormat. "MMMMM DD, yyyy" java.util.Locale/US)
+      (.parse "April 09, 2024"))
+
+  ;;DateTimeFormatter.ofLocalizedDate (FormatStyle.LONG) .format
+
+  (to-sql-date  "April 09, 2025")
+
+  (.parse (DateTimeFormatter/ofLocalizedDate FormatStyle/LONG) "April 09, 2024")
 
   (update-md5!)
   (select-import)
