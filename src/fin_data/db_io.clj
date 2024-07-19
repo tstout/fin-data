@@ -3,6 +3,7 @@
             [sys-loader.bootstrap :as sys-boot]
             [next.jdbc.result-set :as rs]
             [next.jdbc :as jdbc]
+            [clojure.tools.logging :as log]
             [fin-data.md5 :refer [md5]])
   (:import [java.text SimpleDateFormat]
            [java.time.format DateTimeFormatter FormatStyle]
@@ -13,11 +14,15 @@
   "Convert date string of the format April 09, 2024 to a 
    java.sql Date object."
   [date-str]
-  (-> FormatStyle/LONG
-      DateTimeFormatter/ofLocalizedDate
-      (.parse date-str)
-      LocalDate/from
-      Date/valueOf))
+  (try
+    (-> FormatStyle/LONG
+        DateTimeFormatter/ofLocalizedDate
+        (.parse date-str)
+        LocalDate/from
+        Date/valueOf)
+    (catch Exception _
+      (log/errorf "Error parsing date '%s' using 1-1-1970" date-str)
+      (java.sql.Date/valueOf "1970-01-01"))))
 
 (defn data-src
   "Grab the datasource from the sys-loader context"
@@ -114,7 +119,7 @@
 
   ;;DateTimeFormatter.ofLocalizedDate (FormatStyle.LONG) .format
 
-  (to-sql-date  "April 09, 2025")
+  (to-sql-date  "July 02, 2024")
 
   (.parse (DateTimeFormatter/ofLocalizedDate FormatStyle/LONG) "April 09, 2024")
 
