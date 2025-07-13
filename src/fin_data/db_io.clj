@@ -121,6 +121,8 @@
 
   (to-sql-date  "July 02, 2024")
 
+  (to-sql-date "June 25, 2025")
+
   (.parse (DateTimeFormatter/ofLocalizedDate FormatStyle/LONG) "April 09, 2024")
 
   (update-md5!)
