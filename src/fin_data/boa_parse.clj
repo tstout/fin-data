@@ -101,7 +101,9 @@
   "TODO - add docs here..."
   [words]
   (when-let [merch-index ((some-fn #(string/index-of % "made at")
+                                   #(string/index-of % "Made at")
                                    #(string/index-of % "Where:")
+                                   #(string/index-of % "From:")
                                    #(string/index-of % "Type")) words)]
     (subs words
           (+ 4 merch-index)
@@ -185,9 +187,6 @@
     
     (:content-type (:body (nth @recent 32)))
     (:content-type (nth @recent 32)) 
-
-
-    ;; Paychecks - 24 
 
     (parse-body (nth @recent 6)) 
     
