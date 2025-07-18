@@ -104,6 +104,7 @@
                                    #(string/index-of % "Made at")
                                    #(string/index-of % "Where:")
                                    #(string/index-of % "From:")
+                                   #(string/index-of % "From")
                                    #(string/index-of % "Type")) words)]
     (subs words
           (+ 4 merch-index)
