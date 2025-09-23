@@ -105,7 +105,8 @@
                                    #(string/index-of % "Where:")
                                    #(string/index-of % "From:")
                                    #(string/index-of % "From")
-                                   #(string/index-of % "Type")) words)]
+                                   #(string/index-of % "Type")
+                                   #(string/index-of % "Merchant")) words)]
     (subs words
           (+ 4 merch-index)
           (min (+ 50 4 merch-index) (.length words)))))
