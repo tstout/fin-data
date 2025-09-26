@@ -109,7 +109,7 @@
                                    #(string/index-of % "Merchant")) words)]
     (subs words
           (+ 4 merch-index)
-          (min (+ 50 4 merch-index) (.length words)))))
+          (min (+ 100 4 merch-index) (.length words)))))
 
 (defn parse-body [mail-body]
   (let [words (body-text mail-body)]
