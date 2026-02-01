@@ -1,6 +1,7 @@
 (ns fin-data.creds
   (:require [clojure.edn :as edn]
-            [conceal.core :refer [reveal mk-opts key-from-env]])
+            [conceal.core :refer [reveal mk-opts key-from-env]]
+            [clojure.tools.logging :as log])
   (:import [java.net.http
             HttpClient
             HttpRequest
@@ -30,15 +31,22 @@
   (-> (HttpClient/newHttpClient)
       (.send req (HttpResponse$BodyHandlers/ofString))))
 
+;; TODO - put try catch rethrow here
 (defn fetch-account [uri]
-  ;;(log/infof "fetch-acccount %s" uri)
-  (-> uri
-      get-request
-      http-tx
-      .body
-      edn/read-string
-      first
-      decrypt-creds))
+  (log/infof "fetch-acccount %s" uri)
+  (try 
+    (-> uri
+        get-request
+        http-tx
+        .body
+        edn/read-string
+        first
+        decrypt-creds)
+    (catch Exception e
+      (log/error "fetch-account error" e)
+      (throw (ex-info "Error fetching account creds"
+                      {:uri uri}
+                      e)))))
 
 (comment
 

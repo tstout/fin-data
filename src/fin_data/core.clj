@@ -60,8 +60,13 @@
       (case action
         "server" (do
                    (sys/-main args)
-                   (log/debug "fin-data server init complete")
-                   @boa/email-poller)))))
+                   (log/info "fin-data server init complete...")
+                   (try 
+                     @boa/email-poller
+                     (log/info "Email poller start complete")
+                     (.join (Thread/currentThread))
+                     (catch Exception e
+                       (log/error "Error starting email poller" e))))))))
 
 (defn init
   "The sys-module initialization fn. This configures the DB schema."
