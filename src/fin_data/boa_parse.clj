@@ -35,6 +35,7 @@
    Provide a second argument of a string representing the up-to date in the form
    dd-MM-YYY"
   ([m]
+   (log/info "fetching emails beginning yesterday...")
    (recent-boa m :yesterday))
   ([m received-after-date]
    (let [after-date (if (keyword? received-after-date)
@@ -123,27 +124,31 @@
     [future-to-watch fn-to-call]
     (future (fn-to-call @future-to-watch)))
 
-;; TODO - I think the map here is only processing the first txn
-;; Need to catch exception if parse-body throws
-;; Location of conf-service needs to be configurable (cmd-line arg?)
+  ;;
+  ;; If here from repl to reprocess previous dates due to whatever
+  ;; failure reason, adjust the date on recent-boa (3rd arg) call as desired.
+  ;;
   (defn extract-values-from-txns []
     (when-done
      (recent-boa (fetch-account
                   "http://localhost:8080/v1/config/account/gmail-tstout")
-                 #_"02-Jul-2024")
+                 #_"03-Jul-2026")
      (fn [fut-result] (map parse-body fut-result))))
+
+
+  (defn pull-txns []
+    (log/info "Excecuting email poll2...")
+    (let [parsings @(extract-values-from-txns)]
+      (log/infof "Found %d transactions...inserting" (count parsings))
+      (doseq [txn (filter map? parsings)]
+        (if (every? nil? (vals txn)) 
+          (log/info "Email encountered without any amount...expected")
+          (insert-checking txn)))))
 
   (defn poller [minutes]
     (periodic-fn (* 1000 60 minutes)
-                 (fn []
-                   (log/info "Excecuting email poll...")
-                   (let [parsings @(extract-values-from-txns)]
-                     (log/infof "Found %d transactions...inserting" (count parsings))
-                     (doseq [txn (filter map? parsings)]
-                       (if (every? nil? (vals txn)) 
-                         (log/info "Email encountered without any amount...expected")
-                         (insert-checking txn)))))))
-
+                 pull-txns))
+                 
   (def email-poller
     (delay (poller 5)
            (log/info "Email poller started - 5 minute interval")))
@@ -204,6 +209,8 @@
     (first @parsings)
 
     (legacy-date "02-Jul-2024")
+
+    (pull-txns)
 
     ;;
     )
