@@ -132,7 +132,7 @@
     (when-done
      (recent-boa (fetch-account
                   "http://localhost:8080/v1/config/account/gmail-tstout")
-                 #_"03-Jul-2026")
+                  #_"10-Aug-2026")
      (fn [fut-result] (map parse-body fut-result))))
 
 
@@ -158,6 +158,8 @@
     (add-tap println)
     (remove-tap println)
 
+    (extract-values-from-txns)
+
     (def recent (recent-boa (fetch-account
                              "http://localhost:8080/v1/config/account/gmail-tstout")
                             "20-Jun-2025"))
@@ -177,27 +179,6 @@
     (first @recent)
     
     (count @recent)
-
-    (body-text (nth @recent 23))
-
-  ;; Exercise new parsing impls
-    (-> (body-text (nth @recent 28))
-        (find-amount -1))
-
-    (-> (body-text (nth @recent 28))
-        find-date)
-
-    (-> (body-text (nth @recent 28))
-        find-merchant)
-
-    (extract-body (nth @recent 28))
-    
-    (:content-type (:body (nth @recent 32)))
-    (:content-type (nth @recent 32)) 
-
-    (parse-body (nth @recent 6)) 
-    
-    (body-text (nth @recent 24)) 
     
     (def parsings (extract-values-from-txns))
     (nth @parsings 1)

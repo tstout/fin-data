@@ -1,7 +1,7 @@
 {:deps    {org.clojure/tools.cli               {:mvn/version "0.3.5"}
            org.clojure/core.async              {:mvn/version "1.6.681"}
            ;;io.github.tstout/sys-loader         {:local/root "../sys-loader"}
-           io.github.tstout/sys-loader         {:git/tag "v1.1.10"
+           io.github.tstout/sys-loader         {:git/tag "v1.1.11"
                                                 :git/sha "88a0954"}
            com.github.tstout/conceal           {:git/url "https://github.com/tstout/conceal"
                                                 :git/tag "v1.0.0"
@@ -14,7 +14,7 @@
            org.clojure/tools.logging           {:mvn/version "1.2.4"}
            io.forward/clojure-mail             {:mvn/version "1.0.8"}}
  :aliases {:fin-data {:main-opts ["-m" "fin-data.core"]}
-           :repl     {:extra-deps  {com.github.tstout/repl-kit  {:mvn/version "1.0.12"}
+           :repl     {:extra-deps  {com.github.tstout/repl-kit  {:mvn/version "1.0.13"}
                                     org.clojure/tools.namespace {:mvn/version "1.5.0"}}
                       :extra-paths ["dev"]
                       :main-opts   ["-m" "repl-kit.core" "--port" "8000" "--server" "stout-pi4.local" "--remote"]}
