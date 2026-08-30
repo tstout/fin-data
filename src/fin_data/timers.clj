@@ -15,7 +15,7 @@
         (timeout msecs) (do
                           (try
                             (f)
-                            (catch Exception e
+                            (catch Throwable e
                               (log/error e "periodic-fn exception")))
                           (recur))
         stop-ch nil))
