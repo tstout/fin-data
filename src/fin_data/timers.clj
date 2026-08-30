@@ -1,5 +1,5 @@
 (ns fin-data.timers
-  (:require [clojure.core.async :refer [go-loop chan alt! timeout put!]]
+  (:require [clojure.core.async :refer [go-loop chan alt! timeout put! thread]]
             [clojure.tools.logging :as log]))
 
 ;; TODO - considering adding ability to run at a specific
@@ -14,7 +14,7 @@
       (alt!
         (timeout msecs) (do
                           (try
-                            (f)
+                            (thread (f))
                             (catch Throwable e
                               (log/error e "periodic-fn exception")))
                           (recur))
