@@ -137,13 +137,16 @@
 
 
   (defn pull-txns []
-    (log/info "Excecuting email poll2...")
-    (let [parsings @(extract-values-from-txns)]
-      (log/infof "Found %d transactions...inserting" (count parsings))
-      (doseq [txn (filter map? parsings)]
-        (if (every? nil? (vals txn)) 
-          (log/info "Email encountered without any amount...expected")
-          (insert-checking txn)))))
+    (try
+      (log/info "Excecuting email poll2...")
+      (let [parsings @(extract-values-from-txns)]
+        (log/infof "Found %d transactions...inserting" (count parsings))
+        (doseq [txn (filter map? parsings)]
+          (if (every? nil? (vals txn)) 
+            (log/info "Email encountered without any amount...expected")
+            (insert-checking txn))))
+      (catch Exception exception
+        (log/error exception "Exception while pulling transactions"))))
 
   (defn poller [minutes]
     (periodic-fn (* 1000 60 minutes)
