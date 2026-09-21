@@ -51,7 +51,7 @@
 (comment
 
   (fetch-account
-   "http://stout-pi4:8080/v1/config/account/gmail-tstout")
+   "http://stout-pi4.local:8080/v1/config/account/gmail-tstout")
 
   ;;
   )

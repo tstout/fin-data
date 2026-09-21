@@ -164,8 +164,13 @@
     (extract-values-from-txns)
 
     (def recent (recent-boa (fetch-account
-                             "http://localhost:8080/v1/config/account/gmail-tstout")
-                            "20-Jun-2025"))
+                             "http://stout-pi4:8080/v1/config/account/gmail-tstout")
+                            "16-Sep-2026"))
+
+    @recent 
+    (type @recent)
+
+    (count (vec @recent))
 
     (realized? recent)
 
