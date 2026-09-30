@@ -5,7 +5,8 @@
             [sys-loader.core :as sys]
             [sys-loader.bootstrap :as sys-boot]
             [fin-data.boa-parse :as boa]
-            [fin-data.ddl :as ddl])
+            [fin-data.ddl :as ddl]
+            [fin-data.batch :refer [log-cleaner]])
   (:gen-class))
 
 (def cli-options
@@ -62,11 +63,11 @@
                    (sys/-main args)
                    (log/info "fin-data server init complete...")
                    (try 
-                     @boa/email-poller
-                     (log/info "Email poller start complete")
+                     @boa/email-poller 
+                     @log-cleaner
                      (.join (Thread/currentThread))
                      (catch Exception e
-                       (log/error "Error starting email poller" e))))))))
+                       (log/error "Error starting batch processing" e))))))))
 
 (defn init
   "The sys-module initialization fn. This configures the DB schema."

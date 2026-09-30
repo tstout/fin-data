@@ -106,11 +106,18 @@
                           amt
                           merchant]))))
 
+(defn purge-logs []
+  (with-open [conn (jdbc/get-connection (data-src))]
+    (log/info "purging logs older than 30 days")
+    (jdbc/execute-one! conn
+                       [(sql-text :log-purge)])))
+
+
 (comment
   *e
   ;; example formatter
   ;; https://www.baeldung.com/java-datetimeformatter
-
+  
   ;; This was an issue causing posting date to be wrong. 
   ;; Apparently SimpleDateFormat is broken here, month is 
   ;; always January.
@@ -118,7 +125,7 @@
       (.parse "April 09, 2024"))
 
   ;;DateTimeFormatter.ofLocalizedDate (FormatStyle.LONG) .format
-
+  
   (to-sql-date  "July 02, 2024")
 
   (to-sql-date "June 25, 2025")
