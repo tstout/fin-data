@@ -1,11 +1,12 @@
 {:deps    {org.clojure/tools.cli               {:mvn/version "0.3.5"}
            org.clojure/core.async              {:mvn/version "1.6.681"}
            ;;io.github.tstout/sys-loader         {:local/root "../sys-loader"}
-           io.github.tstout/sys-loader         {:git/tag "v1.1.11"
-                                                :git/sha "5498a2c"}
-           com.github.tstout/conceal           {:git/url "https://github.com/tstout/conceal"
-                                                :git/tag "v1.0.0"
-                                                :git/sha "e9ab405"}
+           io.github.tstout/sys-loader         {:git/tag "v1.1.13"
+                                                :git/sha "fc309db"}
+           com.github.tstout/conceal
+           {:git/url "https://github.com/tstout/conceal"
+            :git/tag "v1.0.0"
+            :git/sha "e9ab405"}
            com.github.seancorfield/next-jdbc   {:git/tag "v1.2.724"
                                                 :git/sha "de432a2"}
            camel-snake-kebab/camel-snake-kebab {:git/url "https://github.com/clj-commons/camel-snake-kebab.git"
