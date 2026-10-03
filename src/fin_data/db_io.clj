@@ -108,14 +108,19 @@
 
 (defn purge-logs []
   (with-open [conn (jdbc/get-connection (data-src))]
-    (log/info "purging logs older than 30 days")
-    (jdbc/execute-one! conn
-                       [(sql-text :log-purge)])))
+    (log/info "purging logs older than 30 days...")
+    (log/infof "purge result: %s"
+               (-> (jdbc/execute-one! conn
+                                       [(sql-text :log-purge)])
+                   first
+                   str))))
 
 
 (comment
   *e
-  ;; example formatter
+
+  (purge-logs)
+   ; example formatter
   ;; https://www.baeldung.com/java-datetimeformatter
   
   ;; This was an issue causing posting date to be wrong. 
