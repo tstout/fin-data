@@ -114,7 +114,7 @@
           (min (+ 100 4 merch-index) (.length words)))))
 
 (def ^:private merchant-labels
-  ["made at" "Made at" "Where:" "From" "From:" "Merchant" "Type"])
+  ["made at" "where" "from" "merchant" "type"])
 
 
 (defn- html-cell-text [cell]
