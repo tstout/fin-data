@@ -114,27 +114,36 @@
           (min (+ 100 4 merch-index) (.length words)))))
 
 (def ^:private merchant-labels
-  #{"where:" "merchant:" "made at:" "from:"})
+  ["made at" "where" "from" "merchant" "type"])
 
 (defn- html-cell-text [cell]
   (-> (.text cell)
       (string/replace #"\s+" " ")
       string/trim))
 
+(defn- normalize-html-label [cell]
+  (-> (html-cell-text cell)
+      string/lower-case
+      (string/replace #":$" "")))
+
 (defn- find-html-merchant [html]
-  (some
-   (fn [row]
-     (let [cells (->> (.children row)
-                      seq
-                      (filter #(= "td" (.tagName %)))
-                      vec)
-           label (some-> (first cells) html-cell-text string/lower-case)]
-       (when (and (>= (count cells) 2)
-                  (contains? merchant-labels label))
-         (let [merchant (html-cell-text (second cells))]
-           (when-not (string/blank? merchant)
-             merchant)))))
-   (.select (Jsoup/parse html) "tr")))
+  (let [rows (mapv (fn [row]
+                     (let [cells (->> (.children row)
+                                      seq
+                                      (filter #(= "td" (.tagName %)))
+                                      vec)]
+                       [(when (>= (count cells) 2)
+                          (normalize-html-label (first cells)))
+                        (when (>= (count cells) 2)
+                          (html-cell-text (second cells)))]))
+                   (.select (Jsoup/parse html) "tr"))]
+    (some (fn [label]
+            (some (fn [[row-label value]]
+                    (when (and (= label row-label)
+                               (not (string/blank? value)))
+                      value))
+                  rows))
+          merchant-labels)))
 
 (defn parse-body [mail-body]
   (let [words (body-text mail-body)

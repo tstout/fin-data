@@ -27,6 +27,16 @@
           :amt      -226.64M}
          (parse-body (load-res :type-4)))))
 
+(deftest parse-html-merchant-label-aliases
+  (doseq [label ["Made at" "Where:" "From" "Type" "Merchant"]]
+    (let [html (str "<table><tr><td>" label
+                    "</td><td> ACME PAYROLL </td></tr></table>")
+          email {:body {:content-type "TEXT/HTML"
+                        :body html}}]
+      (is (= "ACME PAYROLL"
+             (:merchant (parse-body email)))
+          (str "merchant label: " label)))))
+
 (comment
   *e
   (run-tests)
