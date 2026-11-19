@@ -1,6 +1,10 @@
 (ns fin-data.timers
   "Timer functionality for executing a function every x milliseconds
-   or at a specific time of day."
+   or at a specific time of day.
+   
+   See periodic-fn and daily-fn for the main entry points. Both return a function
+   that can be called with :restart or :stop to control the timer.
+   "
   (:require [clojure.core.async :refer [go-loop chan alt! timeout close! thread]]
             [clojure.tools.logging :as log])
   (:import [java.time Duration LocalTime ZoneId ZonedDateTime]))
@@ -31,7 +35,12 @@
                :stop  (fn [] (close! @stop-ch))}]
     (fn [operation & args] (-> (timer-ops operation) (apply args)))))
 
-(defn periodic-fn [msecs f]
+(defn periodic-fn 
+  "Creates a timer that executes the function f every msecs milliseconds.
+   
+   Returns a function that can be called with :restart or :stop to control the timer.
+   "
+  [msecs f]
   {:pre [(fn? f) (int? msecs)]}
   (timer-fn (constantly msecs) f))
 
@@ -49,7 +58,13 @@
                        (.atZone zone)))]
     (.toMillis (Duration/between now next-run))))
 
-(defn daily-fn [zone-id hour minute f]
+(defn daily-fn 
+  "Creates a timer that executes the function f every day at the specified 
+   hour and minute in the given time zone.
+   
+   Returns a function that can be called with :restart or :stop to control the timer.
+   "
+  [zone-id hour minute f]
   {:pre [(string? zone-id)
          (int? hour)
          (int? minute)
@@ -58,7 +73,7 @@
     (timer-fn #(delay-until zone hour minute) f)))
 
 (comment
-  (def tmr (periodic-fn 5000 #(println "Fn executed!")))
+  (def tmr (periodic-fn 5000 #(println "Fn executed!"))) 
   (def tmr-ex (periodic-fn 5000 #(throw (Exception. "Fn executed!"))))
 
   (def tmr-daily (daily-fn "America/Chicago" 18 21 #(println "Daily Fn executed!")))
