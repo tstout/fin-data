@@ -48,7 +48,7 @@
             (filter #(let [addr (or (-> % :from first :address) "unknown")]
                        (includes? addr "bankofamerica"))))))))
 
-(defn extract-body [msg] 
+(defn extract-body [msg]
   (let [{:keys [body]} msg]
     (condp #(starts-with? %2 %1) (or (:content-type body) "")
       "TEXT/HTML" (html->text (:body body))
@@ -114,7 +114,8 @@
           (min (+ 100 4 merch-index) (.length words)))))
 
 (def ^:private merchant-labels
-  ["made at" "where" "from" "merchant" "type"])
+  ["made at" "Made at" "Where:" "From" "From:" "Merchant" "Type"])
+
 
 (defn- html-cell-text [cell]
   (-> (.text cell)
@@ -158,88 +159,87 @@
      :amt (find-amount words (if (string/includes? words "credited") 1 -1))
      :merchant merchant}))
 
-  (defn when-done
-    "Invoke a fn when a future completes. Returns a future wrapping the result
+(defn when-done
+  "Invoke a fn when a future completes. Returns a future wrapping the result
    of the fn to call."
-    [future-to-watch fn-to-call]
-    (future (fn-to-call @future-to-watch)))
+  [future-to-watch fn-to-call]
+  (future (fn-to-call @future-to-watch)))
 
   ;;
   ;; If here from repl to reprocess previous dates due to whatever
   ;; failure reason, adjust the date on recent-boa (3rd arg) call as desired.
   ;;
-  (defn extract-values-from-txns []
-    (when-done
-     (recent-boa (fetch-account
-                  "http://localhost:8080/v1/config/account/gmail-tstout")
-                  #_"10-Aug-2026")
-     (fn [fut-result] (map parse-body fut-result))))
+(defn extract-values-from-txns []
+  (when-done
+   (recent-boa (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout")
+               #_"10-Aug-2026")
+   (fn [fut-result] (map parse-body fut-result))))
 
+(defn pull-txns []
+  (try
+    (log/info "Excecuting email poll2...")
+    (let [parsings @(extract-values-from-txns)]
+      (log/infof "Found %d transactions...inserting" (count parsings))
+      (doseq [txn (filter map? parsings)]
+        (if (every? nil? (vals txn))
+          (log/info "Email encountered without any amount...expected")
+          (insert-checking txn))))
+    (catch Exception exception
+      (log/error exception "Exception while pulling transactions"))))
 
-  (defn pull-txns []
-    (try
-      (log/info "Excecuting email poll2...")
-      (let [parsings @(extract-values-from-txns)]
-        (log/infof "Found %d transactions...inserting" (count parsings))
-        (doseq [txn (filter map? parsings)]
-          (if (every? nil? (vals txn)) 
-            (log/info "Email encountered without any amount...expected")
-            (insert-checking txn))))
-      (catch Exception exception
-        (log/error exception "Exception while pulling transactions"))))
+(defn poller [minutes]
+  (periodic-fn (* 1000 60 minutes)
+               pull-txns))
 
-  (defn poller [minutes]
-    (periodic-fn (* 1000 60 minutes)
-                 pull-txns))
-                 
-  (def email-poller
-    (delay (poller 5)
-           (log/info "Email poller started - 5 minute interval")))
+(def email-poller
+  (delay (poller 5)
+         (log/info "Email poller started - 5 minute interval")))
 
-  (comment
-    *e
-    (add-tap println)
-    (remove-tap println)
+(comment
+  *e
+  (add-tap println)
+  (remove-tap println)
 
-    (extract-values-from-txns)
+  (extract-values-from-txns)
 
-    (def recent (recent-boa (fetch-account
-                             "http://stout-pi4:8080/v1/config/account/gmail-tstout")
-                            "16-Sep-2026"))
+  (def recent (recent-boa (fetch-account
+                           "http://stout-pi4:8080/v1/config/account/gmail-tstout")
+                          "16-Sep-2026"))
 
-    @recent 
-    (type @recent)
+  @recent
+  (type @recent)
 
-    (count (vec @recent))
+  (count (vec @recent))
 
-    (realized? recent)
+  (realized? recent)
 
-    (def email (-> "/Users/tstout/src/fin-data/email.edn"
-                   slurp
-                   clojure.edn/read-string))
-    email
+  (def email (-> "/Users/tstout/src/fin-data/email.edn"
+                 slurp
+                 clojure.edn/read-string))
+  email
 
-    (parse-body email)
-    
-    (nth @recent 2)
-    (count @recent)
+  (parse-body email)
 
-    (first @recent)
-    
-    (count @recent)
-    
-    (def parsings (extract-values-from-txns))
-    (nth @parsings 1)
+  (nth @recent 2)
+  (count @recent)
 
-    (realized? parsings)
-    (count @parsings)
-    parsings
+  (first @recent)
 
-    (first @parsings)
+  (count @recent)
 
-    (legacy-date "02-Jul-2024")
+  (def parsings (extract-values-from-txns))
+  (nth @parsings 1)
 
-    (pull-txns)
+  (realized? parsings)
+  (count @parsings)
+  parsings
+
+  (first @parsings)
+
+  (legacy-date "02-Jul-2024")
+
+  (pull-txns)
 
     ;;
-    )
+  )
