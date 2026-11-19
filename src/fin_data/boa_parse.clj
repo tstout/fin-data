@@ -152,6 +152,52 @@
                   rows))
           merchant-labels)))
 
+(defn- html-transaction-rows [html]
+  (map (fn [row]
+         (let [cells (->> (.children row)
+                          seq
+                          (filter #(= "td" (.tagName %)))
+                          vec)
+               label-cell (first cells)]
+           {:label (when label-cell
+                     (normalize-html-label label-cell))
+            :value (some-> (second cells) html-cell-text)
+            :text (html-cell-text row)}))
+       (.select (Jsoup/parse html) "tr")))
+
+(defn- parse-html-amount [value sign]
+  (when-let [amount (and value
+                         (re-find #"[-+]?\s*\$?\s*[\d,]+(?:\.\d{1,2})?" value))]
+    (-> amount
+        (string/replace #"[,$\s]" "")
+        bigdec
+        (* sign))))
+
+(defn- parse-multiple-html-transactions [mail-body]
+  (let [html (get-in mail-body [:body :body])
+        rows (html-transaction-rows html)
+        amount-rows (filter #(= "amount" (:label %)) rows)
+        sign (if (includes? (body-text mail-body) "credited") 1 -1)]
+    (when (> (count amount-rows) 1)
+      (->> rows
+           (reduce (fn [txns {:keys [label value text]}]
+                     (if (= "amount" label)
+                       (conj txns {:amt (parse-html-amount value sign)})
+                       (if (seq txns)
+                         (let [txns (if-let [merchant-label (canonical-merchant-label label)]
+                                      (if (contains? (set merchant-labels) merchant-label)
+                                        (update txns (dec (count txns)) assoc :merchant value)
+                                        txns)
+                                      txns)
+                               date (find-date text)]
+                           (if date
+                             (update txns (dec (count txns)) assoc :on date)
+                             txns))
+                         txns)))
+                   [])
+           (filter #(some? (:amt %)))
+           vec))))
+
 (defn parse-body [mail-body]
   (let [words (body-text mail-body)
         html? (and (map? mail-body)
@@ -164,6 +210,14 @@
     {:on (find-date words)
      :amt (find-amount words (if (includes? words "credited") 1 -1))
      :merchant merchant}))
+
+(defn parse-transactions [mail-body]
+  (or (when (and (map? mail-body)
+                 (starts-with? (string/upper-case
+                                (or (get-in mail-body [:body :content-type]) ""))
+                               "TEXT/HTML"))
+        (parse-multiple-html-transactions mail-body))
+      [(parse-body mail-body)]))
 
 (defn when-done
   "Invoke a fn when a future completes. Returns a future wrapping the result
@@ -180,7 +234,7 @@
    (recent-boa (fetch-account
                 "http://localhost:8080/v1/config/account/gmail-tstout")
                #_"10-Aug-2026")
-   (fn [fut-result] (map parse-body fut-result))))
+   (fn [fut-result] (mapcat parse-transactions fut-result))))
 
 (defn pull-txns []
   (try
@@ -221,6 +275,8 @@
   (def example-4 (nth (vec @recent) 3))
   (def example-5 (nth (vec @recent) 4))
 
+  (-> example-1 :body)
+
   (parse-body example-1) 
   (parse-body example-2) 
   (parse-body example-3)
@@ -228,7 +284,7 @@
   (parse-body example-5)
 
   (spit 
-   "test/resources/nil-merchant.edn" 
+   "test/resources/multi-txn.edn" 
    (with-out-str (clojure.pprint/pprint example-1)))
 
 
