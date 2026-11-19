@@ -30,9 +30,9 @@
 ;;   
 
 (deftest fix-nil-merchant
-  (is (= {:merchant "ZAP*ZAPPOS.COM -800-927-7671 ,NV"
-          :on       "November 18, 2026"
-          :amt      -189.38M}
+  (is (= {:merchant "TEST MERCHANT"
+          :on       "January 1, 2000"
+          :amt      -1.23M}
          (parse-body (load-res :nil-merchant)))))
 
 (deftest parse-html-merchant-label-aliases
