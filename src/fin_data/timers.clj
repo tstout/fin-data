@@ -25,9 +25,9 @@
 (defn- timer-fn [delay-fn f]
   (let
    [stop-ch   (atom (run delay-fn f))
-    timer-ops {:start (fn []
-                        (close! @stop-ch)
-                        (reset! stop-ch (run delay-fn f)))
+    timer-ops {:restart (fn []
+                          (close! @stop-ch)
+                          (reset! stop-ch (run delay-fn f)))
                :stop  (fn [] (close! @stop-ch))}]
     (fn [operation & args] (-> (timer-ops operation) (apply args)))))
 
@@ -63,13 +63,13 @@
 
   (def tmr-daily (daily-fn "America/Chicago" 18 21 #(println "Daily Fn executed!")))
 
-  (tmr-daily :start)
+  (tmr-daily :restart)
   (tmr-daily :stop)
 
   (tmr-ex :stop)
-  (tmr-ex :start)
+  (tmr-ex :restart)
   (tmr :stop)
-  (tmr :start)
+  (tmr :restart)
 
 ;;
   )
