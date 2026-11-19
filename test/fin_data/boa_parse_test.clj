@@ -27,6 +27,14 @@
           :amt      -226.64M}
          (parse-body (load-res :type-4)))))
 
+;;   
+
+(deftest fix-nil-merchant
+  (is (= {:merchant "ZAP*ZAPPOS.COM -800-927-7671 ,NV"
+          :on       "November 18, 2026"
+          :amt      -189.38M}
+         (parse-body (load-res :nil-merchant)))))
+
 (deftest parse-html-merchant-label-aliases
   (doseq [label ["Made at" "Where:" "From" "Type" "Merchant"]]
     (let [html (str "<table><tr><td>" label

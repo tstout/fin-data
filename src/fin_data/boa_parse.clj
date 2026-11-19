@@ -127,6 +127,12 @@
       string/lower-case
       (string/replace #":$" "")))
 
+(defn- canonical-merchant-label [label]
+  (when label
+    (cond
+      (includes? label "made at") "made at"
+      (contains? #{"where" "from" "merchant" "type"} label) label)))
+
 (defn- find-html-merchant [html]
   (let [rows (mapv (fn [row]
                      (let [cells (->> (.children row)
@@ -140,7 +146,7 @@
                    (.select (Jsoup/parse html) "tr"))]
     (some (fn [label]
             (some (fn [[row-label value]]
-                    (when (and (= label row-label)
+                    (when (and (= label (canonical-merchant-label row-label))
                                (not (string/blank? value)))
                       value))
                   rows))
@@ -156,7 +162,7 @@
                    (find-html-merchant (get-in mail-body [:body :body]))
                    (find-merchant words))]
     {:on (find-date words)
-     :amt (find-amount words (if (string/includes? words "credited") 1 -1))
+     :amt (find-amount words (if (includes? words "credited") 1 -1))
      :merchant merchant}))
 
 (defn when-done
@@ -200,14 +206,33 @@
   *e
   (add-tap println)
   (remove-tap println)
-
-  (extract-values-from-txns)
-
+  
   (def recent (recent-boa (fetch-account
                            "http://stout-pi4:8080/v1/config/account/gmail-tstout")
-                          "16-Sep-2026"))
+                          "18-Nov-2026"))
+  
+  (realized? recent)
 
   @recent
+
+  (def example-1 (nth (vec @recent) 0))
+  (def example-2 (nth (vec @recent) 1))
+  (def example-3 (nth (vec @recent) 2))
+  (def example-4 (nth (vec @recent) 3))
+  (def example-5 (nth (vec @recent) 4))
+
+  (parse-body example-1) 
+  (parse-body example-2) 
+  (parse-body example-3)
+  (parse-body example-4)
+  (parse-body example-5)
+
+  (spit 
+   "test/resources/nil-merchant.edn" 
+   (with-out-str (clojure.pprint/pprint example-1)))
+
+
+
   (type @recent)
 
   (count (vec @recent))
