@@ -13,9 +13,7 @@
    edn/read-string))
 
 (comment
-
   (load-res :type-6)
-
 
   ;;
   )
