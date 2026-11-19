@@ -6,3 +6,13 @@
 (def log-cleaner
   (delay (daily-fn "America/Chicago" 19 00 purge-logs)
          (log/info "Log cleaner started - every day at 19:00 CST")))
+
+(comment
+  (defn foo [] :foo)
+  (defn bar [] :bar) 
+
+  (doseq [f [#'foo #'bar]]
+    (println (f)))
+
+  ;;
+  )

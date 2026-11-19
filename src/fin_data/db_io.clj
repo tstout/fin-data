@@ -117,8 +117,8 @@
 
 
 (comment
-  *e
-
+  *e 
+   (import-csv) 
   (purge-logs)
    ; example formatter
   ;; https://www.baeldung.com/java-datetimeformatter
@@ -131,7 +131,7 @@
 
   ;;DateTimeFormatter.ofLocalizedDate (FormatStyle.LONG) .format
   
-  (to-sql-date  "July 02, 2024")
+  (to-sql-date  "July 02, 2024") 
 
   (to-sql-date "June 25, 2025")
 

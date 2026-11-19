@@ -9,7 +9,8 @@
             [clojure.string :as string :refer [includes? starts-with?]]
             [fin-data.creds :refer [fetch-account]]
             [fin-data.timers :refer [periodic-fn]])
-  (:import [java.text SimpleDateFormat]))
+  (:import [java.text SimpleDateFormat]
+           [org.jsoup Jsoup]))
 
 (defn legacy-date
   "Create a java.util.Date from the string of dd-MMM-yyyy. This is legacy
@@ -47,7 +48,7 @@
             (filter #(let [addr (or (-> % :from first :address) "unknown")]
                        (includes? addr "bankofamerica"))))))))
 
-(defn extract-body [msg] 
+(defn extract-body [msg]
   (let [{:keys [body]} msg]
     (condp #(starts-with? %2 %1) (or (:content-type body) "")
       "TEXT/HTML" (html->text (:body body))
@@ -112,94 +113,214 @@
           (+ 4 merch-index)
           (min (+ 100 4 merch-index) (.length words)))))
 
-(defn parse-body [mail-body]
-  (let [words (body-text mail-body)]
-    {:on (find-date words)
-     :amt (find-amount words (if (string/includes? words "credited") 1 -1))
-     :merchant (find-merchant words)}))
+(def ^:private merchant-labels
+  ["made at" "where" "from" "merchant" "type"])
 
-  (defn when-done
-    "Invoke a fn when a future completes. Returns a future wrapping the result
+
+(defn- html-cell-text [cell]
+  (-> (.text cell)
+      (string/replace #"\s+" " ")
+      string/trim))
+
+(defn- normalize-html-label [cell]
+  (-> (html-cell-text cell)
+      string/lower-case
+      (string/replace #":$" "")))
+
+(defn- canonical-merchant-label [label]
+  (when label
+    (cond
+      (includes? label "made at") "made at"
+      (contains? #{"where" "from" "merchant" "type"} label) label)))
+
+(defn- find-html-merchant [html]
+  (let [rows (mapv (fn [row]
+                     (let [cells (->> (.children row)
+                                      seq
+                                      (filter #(= "td" (.tagName %)))
+                                      vec)]
+                       [(when (>= (count cells) 2)
+                          (normalize-html-label (first cells)))
+                        (when (>= (count cells) 2)
+                          (html-cell-text (second cells)))]))
+                   (.select (Jsoup/parse html) "tr"))]
+    (some (fn [label]
+            (some (fn [[row-label value]]
+                    (when (and (= label (canonical-merchant-label row-label))
+                               (not (string/blank? value)))
+                      value))
+                  rows))
+          merchant-labels)))
+
+(defn- html-transaction-rows [html]
+  (map (fn [row]
+         (let [cells (->> (.children row)
+                          seq
+                          (filter #(= "td" (.tagName %)))
+                          vec)
+               label-cell (first cells)]
+           {:label (when label-cell
+                     (normalize-html-label label-cell))
+            :value (some-> (second cells) html-cell-text)
+            :text (html-cell-text row)}))
+       (.select (Jsoup/parse html) "tr")))
+
+(defn- parse-html-amount [value sign]
+  (when-let [amount (and value
+                         (re-find #"[-+]?\s*\$?\s*[\d,]+(?:\.\d{1,2})?" value))]
+    (-> amount
+        (string/replace #"[,$\s]" "")
+        bigdec
+        (* sign))))
+
+(defn- parse-multiple-html-transactions [mail-body]
+  (let [html (get-in mail-body [:body :body])
+        rows (html-transaction-rows html)
+        amount-rows (filter #(= "amount" (:label %)) rows)
+        sign (if (includes? (body-text mail-body) "credited") 1 -1)]
+    (when (> (count amount-rows) 1)
+      (->> rows
+           (reduce (fn [txns {:keys [label value text]}]
+                     (if (= "amount" label)
+                       (conj txns {:amt (parse-html-amount value sign)})
+                       (if (seq txns)
+                         (let [txns (if-let [merchant-label (canonical-merchant-label label)]
+                                      (if (contains? (set merchant-labels) merchant-label)
+                                        (update txns (dec (count txns)) assoc :merchant value)
+                                        txns)
+                                      txns)
+                               date (find-date text)]
+                           (if date
+                             (update txns (dec (count txns)) assoc :on date)
+                             txns))
+                         txns)))
+                   [])
+           (filter #(some? (:amt %)))
+           vec))))
+
+(defn parse-body [mail-body]
+  (let [words (body-text mail-body)
+        html? (and (map? mail-body)
+                   (starts-with? (string/upper-case
+                                  (or (get-in mail-body [:body :content-type]) ""))
+                                 "TEXT/HTML"))
+        merchant (if html?
+                   (find-html-merchant (get-in mail-body [:body :body]))
+                   (find-merchant words))]
+    {:on (find-date words)
+     :amt (find-amount words (if (includes? words "credited") 1 -1))
+     :merchant merchant}))
+
+(defn parse-transactions [mail-body]
+  (or (when (and (map? mail-body)
+                 (starts-with? (string/upper-case
+                                (or (get-in mail-body [:body :content-type]) ""))
+                               "TEXT/HTML"))
+        (parse-multiple-html-transactions mail-body))
+      [(parse-body mail-body)]))
+
+(defn when-done
+  "Invoke a fn when a future completes. Returns a future wrapping the result
    of the fn to call."
-    [future-to-watch fn-to-call]
-    (future (fn-to-call @future-to-watch)))
+  [future-to-watch fn-to-call]
+  (future (fn-to-call @future-to-watch)))
 
   ;;
   ;; If here from repl to reprocess previous dates due to whatever
   ;; failure reason, adjust the date on recent-boa (3rd arg) call as desired.
   ;;
-  (defn extract-values-from-txns []
-    (when-done
-     (recent-boa (fetch-account
-                  "http://localhost:8080/v1/config/account/gmail-tstout")
-                  #_"10-Aug-2026")
-     (fn [fut-result] (map parse-body fut-result))))
+(defn extract-values-from-txns []
+  (when-done
+   (recent-boa (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout")
+               #_"10-Aug-2026")
+   (fn [fut-result] (mapcat parse-transactions fut-result))))
+
+(defn pull-txns []
+  (try
+    (log/info "Excecuting email poll2...")
+    (let [parsings @(extract-values-from-txns)]
+      (log/infof "Found %d transactions...inserting" (count parsings))
+      (doseq [txn (filter map? parsings)]
+        (if (every? nil? (vals txn))
+          (log/info "Email encountered without any amount...expected")
+          (insert-checking txn))))
+    (catch Exception exception
+      (log/error exception "Exception while pulling transactions"))))
+
+(defn poller [minutes]
+  (periodic-fn (* 1000 60 minutes)
+               pull-txns))
+
+(def email-poller
+  (delay (poller 5)
+         (log/info "Email poller started - 5 minute interval")))
+
+(comment
+  *e
+  (add-tap println)
+  (remove-tap println)
+  
+  (def recent (recent-boa (fetch-account
+                           "http://stout-pi4:8080/v1/config/account/gmail-tstout")
+                          "18-Nov-2026"))
+  
+  (realized? recent)
+
+  @recent
+
+  (def example-1 (nth (vec @recent) 0))
+  (def example-2 (nth (vec @recent) 1))
+  (def example-3 (nth (vec @recent) 2))
+  (def example-4 (nth (vec @recent) 3))
+  (def example-5 (nth (vec @recent) 4))
+
+  (-> example-1 :body)
+
+  (parse-body example-1) 
+  (parse-body example-2) 
+  (parse-body example-3)
+  (parse-body example-4)
+  (parse-body example-5)
+
+  (spit 
+   "test/resources/multi-txn.edn" 
+   (with-out-str (clojure.pprint/pprint example-1)))
 
 
-  (defn pull-txns []
-    (try
-      (log/info "Excecuting email poll2...")
-      (let [parsings @(extract-values-from-txns)]
-        (log/infof "Found %d transactions...inserting" (count parsings))
-        (doseq [txn (filter map? parsings)]
-          (if (every? nil? (vals txn)) 
-            (log/info "Email encountered without any amount...expected")
-            (insert-checking txn))))
-      (catch Exception exception
-        (log/error exception "Exception while pulling transactions"))))
 
-  (defn poller [minutes]
-    (periodic-fn (* 1000 60 minutes)
-                 pull-txns))
-                 
-  (def email-poller
-    (delay (poller 5)
-           (log/info "Email poller started - 5 minute interval")))
+  (type @recent)
 
-  (comment
-    *e
-    (add-tap println)
-    (remove-tap println)
+  (count (vec @recent))
 
-    (extract-values-from-txns)
+  (realized? recent)
 
-    (def recent (recent-boa (fetch-account
-                             "http://stout-pi4:8080/v1/config/account/gmail-tstout")
-                            "16-Sep-2026"))
+  (def email (-> "/Users/tstout/src/fin-data/email.edn"
+                 slurp
+                 clojure.edn/read-string))
+  email
 
-    @recent 
-    (type @recent)
+  (parse-body email)
 
-    (count (vec @recent))
+  (nth @recent 2)
+  (count @recent)
 
-    (realized? recent)
+  (first @recent)
 
-    (def email (-> "/Users/tstout/src/fin-data/email.edn"
-                   slurp
-                   clojure.edn/read-string))
-    email
+  (count @recent)
 
-    (parse-body email)
-    
-    (nth @recent 2)
-    (count @recent)
+  (def parsings (extract-values-from-txns))
+  (nth @parsings 1)
 
-    (first @recent)
-    
-    (count @recent)
-    
-    (def parsings (extract-values-from-txns))
-    (nth @parsings 1)
+  (realized? parsings)
+  (count @parsings)
+  parsings
 
-    (realized? parsings)
-    (count @parsings)
-    parsings
+  (first @parsings)
 
-    (first @parsings)
+  (legacy-date "02-Jul-2024")
 
-    (legacy-date "02-Jul-2024")
-
-    (pull-txns)
+  (pull-txns)
 
     ;;
-    )
+  )
