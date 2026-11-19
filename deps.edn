@@ -13,7 +13,9 @@
                                                 :git/tag "version-0.4.2"
                                                 :git/sha "f4d963f"}
            org.clojure/tools.logging           {:mvn/version "1.2.4"}
-           io.forward/clojure-mail             {:mvn/version "1.0.8"}}
+           io.forward/clojure-mail             {:mvn/version "1.0.8"}
+           org.jsoup/jsoup                     {:mvn/version "1.8.3"}}
+
  :aliases {:fin-data {:main-opts ["-m" "fin-data.core"]}
            :repl     {:extra-deps  {com.github.tstout/repl-kit  {:mvn/version "1.0.13"}
                                     org.clojure/tools.namespace {:mvn/version "1.5.0"}}

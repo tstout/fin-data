@@ -9,7 +9,8 @@
             [clojure.string :as string :refer [includes? starts-with?]]
             [fin-data.creds :refer [fetch-account]]
             [fin-data.timers :refer [periodic-fn]])
-  (:import [java.text SimpleDateFormat]))
+  (:import [java.text SimpleDateFormat]
+           [org.jsoup Jsoup]))
 
 (defn legacy-date
   "Create a java.util.Date from the string of dd-MMM-yyyy. This is legacy
@@ -112,11 +113,41 @@
           (+ 4 merch-index)
           (min (+ 100 4 merch-index) (.length words)))))
 
+(def ^:private merchant-labels
+  #{"where:" "merchant:" "made at:" "from:"})
+
+(defn- html-cell-text [cell]
+  (-> (.text cell)
+      (string/replace #"\s+" " ")
+      string/trim))
+
+(defn- find-html-merchant [html]
+  (some
+   (fn [row]
+     (let [cells (->> (.children row)
+                      seq
+                      (filter #(= "td" (.tagName %)))
+                      vec)
+           label (some-> (first cells) html-cell-text string/lower-case)]
+       (when (and (>= (count cells) 2)
+                  (contains? merchant-labels label))
+         (let [merchant (html-cell-text (second cells))]
+           (when-not (string/blank? merchant)
+             merchant)))))
+   (.select (Jsoup/parse html) "tr")))
+
 (defn parse-body [mail-body]
-  (let [words (body-text mail-body)]
+  (let [words (body-text mail-body)
+        html? (and (map? mail-body)
+                   (starts-with? (string/upper-case
+                                  (or (get-in mail-body [:body :content-type]) ""))
+                                 "TEXT/HTML"))
+        merchant (if html?
+                   (find-html-merchant (get-in mail-body [:body :body]))
+                   (find-merchant words))]
     {:on (find-date words)
      :amt (find-amount words (if (string/includes? words "credited") 1 -1))
-     :merchant (find-merchant words)}))
+     :merchant merchant}))
 
   (defn when-done
     "Invoke a fn when a future completes. Returns a future wrapping the result
