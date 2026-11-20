@@ -4,27 +4,27 @@
             [fin-data.boa-parse :refer [parse-body parse-transactions body-text]]))
 
 (deftest parse-type-6
-  (is (= {:merchant "DD *DOORDASH CAVA -SAN FRANCISCO,CA"
-          :on       "December 16, 2023"
-          :amt      -26.19M}
+  (is (= {:merchant "TEST MERCHANT TYPE 6"
+          :on       "January 4, 2000"
+          :amt      -33.33M}
          (parse-body (load-res :type-6)))))
 
 (deftest parse-type-7
-  (is (= {:merchant "ACME PAYROLL EXT DIR DEP"
-          :on       "December 21, 2023"
-          :amt      -1691.33M}
+  (is (= {:merchant "TEST MERCHANT TYPE 7"
+          :on       "January 5, 2000"
+          :amt      44.44M}
          (parse-body (load-res :type-7)))))
 
 (deftest parse-type-3
-  (is (= {:merchant "at TST* J MACKLINS GRILL--COPPELL ,TX"
-          :on       "December 16, 2023"
-          :amt      -107.96M}
+  (is (= {:merchant "TEST MERCHANT TYPE 3"
+          :on       "January 2, 2000"
+          :amt      -11.11M}
          (parse-body (load-res :type-3)))))
 
 (deftest parse-type-4
-  (is (= {:merchant "NEW YORK LIFE INS. PREM."
-          :on       "December 15, 2023"
-          :amt      -226.64M}
+  (is (= {:merchant "TEST MERCHANT TYPE 4"
+          :on       "January 3, 2000"
+          :amt      -22.22M}
          (parse-body (load-res :type-4)))))
 
 ;;   
