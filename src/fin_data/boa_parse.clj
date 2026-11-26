@@ -4,8 +4,7 @@
             [clojure.tools.logging :as log]
             [clojure-mail.message :as message]
             [fin-data.db-io :refer [insert-checking]]
-            [clojure-mail.parser :refer [html->text]]
-            [clojure.pprint :refer [pprint]]
+            [clojure-mail.parser :refer [html->text]] 
             [clojure.string :as string :refer [includes? starts-with?]]
             [fin-data.creds :refer [fetch-account]]
             [fin-data.timers :refer [periodic-fn]])
@@ -252,9 +251,9 @@
   (periodic-fn (* 1000 60 minutes)
                pull-txns))
 
-(def email-poller
-  (delay (poller 5)
-         (log/info "Email poller started - 5 minute interval")))
+;; (def email-poller
+;;   (delay (poller 5)
+;;          (log/info "Email poller started - 5 minute interval")))
 
 (comment
   *e
