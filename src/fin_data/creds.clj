@@ -31,7 +31,6 @@
   (-> (HttpClient/newHttpClient)
       (.send req (HttpResponse$BodyHandlers/ofString))))
 
-;; TODO - put try catch rethrow here
 (defn fetch-account [uri]
   (log/infof "fetch-acccount %s" uri)
   (try 

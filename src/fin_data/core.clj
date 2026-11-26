@@ -1,12 +1,11 @@
 (ns fin-data.core
   (:require [clojure.tools.cli :refer [parse-opts]]
             [clojure.string :as string]
+            [fin-data.batch :refer [start-batch-jobs]]
             [clojure.tools.logging :as log]
             [sys-loader.core :as sys]
-            [sys-loader.bootstrap :as sys-boot]
-            [fin-data.boa-parse :as boa]
-            [fin-data.ddl :as ddl]
-            [fin-data.batch :refer [log-cleaner]])
+            [sys-loader.bootstrap :as sys-boot] 
+            [fin-data.ddl :as ddl])
   (:gen-class))
 
 (def cli-options
@@ -63,8 +62,7 @@
                    (sys/-main args)
                    (log/info "fin-data server init complete...")
                    (try 
-                     @boa/email-poller 
-                     @log-cleaner
+                     (start-batch-jobs)
                      (.join (Thread/currentThread))
                      (catch Exception e
                        (log/error "Error starting batch processing" e))))))))
